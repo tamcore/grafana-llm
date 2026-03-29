@@ -5,6 +5,7 @@
   "id": "tamcore-llmanalysis-app",
   "backend": true,
   "executable": "gpx_llmanalysis",
+  "preload": true,
   "info": {
     "keywords": ["llm", "ai", "analysis", "openai", "prometheus", "loki"],
     "description": "Wire OpenAI-compatible LLM endpoints into Grafana for dashboard, metric, and log analysis.",
@@ -38,5 +39,24 @@
   "dependencies": {
     "grafanaDependency": ">=10.0.0",
     "plugins": []
+  },
+  "extensions": {
+    "addedLinks": [
+      {
+        "targets": ["grafana/dashboard/panel/menu"],
+        "title": "Analyze with LLM",
+        "description": "Send this panel to AI for analysis"
+      },
+      {
+        "targets": ["grafana/explore/toolbar/action"],
+        "title": "Analyze with LLM",
+        "description": "Analyze current query results with AI"
+      },
+      {
+        "targets": ["grafana/commandpalette/action"],
+        "title": "LLM Analysis",
+        "description": "Open LLM Analysis page"
+      }
+    ]
   }
 }

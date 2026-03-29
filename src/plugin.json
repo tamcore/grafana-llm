@@ -30,6 +30,13 @@
     },
     {
       "type": "page",
+      "name": "Dashboard Chat",
+      "path": "/a/tamcore-llmanalysis-app/dashboard-chat",
+      "role": "Viewer",
+      "addToNav": true
+    },
+    {
+      "type": "page",
       "name": "Configuration",
       "path": "/plugins/tamcore-llmanalysis-app",
       "role": "Admin",

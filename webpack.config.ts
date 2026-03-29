@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 const config = (_env: Record<string, string>): Configuration => ({
   context: join(__dirname, 'src'),
-  entry: './module.ts',
+  entry: './module.tsx',
   devtool: 'source-map',
   output: {
     clean: true,

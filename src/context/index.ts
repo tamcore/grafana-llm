@@ -5,6 +5,7 @@ export type {
   AnalysisContext,
   PanelContext,
   DashboardContext,
+  DashboardPanelSummary,
   LogsContext,
   MetricsContext,
   ChatRequest,

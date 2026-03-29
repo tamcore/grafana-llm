@@ -1,7 +1,8 @@
-import { AppPlugin, PluginExtensionPanelContext } from '@grafana/data';
+import { AppPlugin, AppRootProps, PluginExtensionPanelContext } from '@grafana/data';
 import React from 'react';
+import { Route, Routes } from 'react-router-dom';
 import { AppConfig } from './components/AppConfig';
-import { AnalyzePage } from './pages';
+import { AnalyzePage, DashboardChatPage } from './pages';
 import { PanelAnalysisModal, ExploreAnalysisModal } from './extensions/AnalysisModal';
 import { PLUGIN_ID } from './constants';
 
@@ -10,8 +11,18 @@ const PANEL_MENU_TARGET = 'grafana/dashboard/panel/menu';
 const EXPLORE_TOOLBAR_TARGET = 'grafana/explore/toolbar/action';
 const COMMAND_PALETTE_TARGET = 'grafana/commandpalette/action';
 
+function AppRoot(_props: AppRootProps) {
+  return (
+    <Routes>
+      <Route path="analyze" element={<AnalyzePage />} />
+      <Route path="dashboard-chat" element={<DashboardChatPage />} />
+      <Route path="*" element={<AnalyzePage />} />
+    </Routes>
+  );
+}
+
 export const plugin = new AppPlugin<{}>()
-  .setRootPage(AnalyzePage)
+  .setRootPage(AppRoot)
   .addConfigPage({
     title: 'Configuration',
     icon: 'cog',

@@ -27,9 +27,9 @@ type Settings struct {
 
 // App is the main plugin instance.
 type App struct {
-	backend.CallResourceHandler
-	settings Settings
-	logger   log.Logger
+	httpHandler backend.CallResourceHandler
+	settings    Settings
+	logger      log.Logger
 }
 
 // NewApp creates a new plugin instance from the given settings.

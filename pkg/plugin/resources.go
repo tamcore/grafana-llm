@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -42,7 +43,43 @@ func (a *App) registerRoutes() {
 	mux.HandleFunc("POST /chat", a.handleChat)
 	mux.HandleFunc("/", a.handleNotFound)
 
-	a.CallResourceHandler = httpadapter.New(mux)
+	a.httpHandler = httpadapter.New(mux)
+}
+
+// CallResource routes requests, handling streaming endpoints directly.
+func (a *App) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
+	if req.Path == "chat/stream" && req.Method == http.MethodPost {
+		return a.handleStreamResource(ctx, req, sender)
+	}
+	return a.httpHandler.CallResource(ctx, req, sender)
+}
+
+func (a *App) handleStreamResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
+	var chatReq ChatRequest
+	if err := json.Unmarshal(req.Body, &chatReq); err != nil {
+		return sendErrorResponse(sender, http.StatusBadRequest, "invalid request body: "+err.Error())
+	}
+
+	if chatReq.Prompt == "" {
+		return sendErrorResponse(sender, http.StatusBadRequest, "prompt is required")
+	}
+
+	if !validModes[chatReq.Mode] {
+		return sendErrorResponse(sender, http.StatusBadRequest, "invalid mode: "+chatReq.Mode)
+	}
+
+	return a.streamChatCompletion(ctx, chatReq, sender)
+}
+
+func sendErrorResponse(sender backend.CallResourceResponseSender, status int, message string) error {
+	body, _ := json.Marshal(map[string]string{"error": message})
+	return sender.Send(&backend.CallResourceResponse{
+		Status: status,
+		Headers: map[string][]string{
+			"Content-Type": {"application/json"},
+		},
+		Body: body,
+	})
 }
 
 func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {

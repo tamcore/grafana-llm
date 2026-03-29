@@ -39,6 +39,7 @@ type Usage struct {
 }
 
 var validModes = map[string]bool{
+	"chat":                true,
 	"explain_panel":       true,
 	"summarize_dashboard": true,
 	"analyze_logs":        true,

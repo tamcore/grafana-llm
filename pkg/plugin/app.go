@@ -18,14 +18,15 @@ const (
 
 // Settings holds the plugin configuration parsed from Grafana's jsonData and secureJsonData.
 type Settings struct {
-	EndpointURL    string            `json:"endpointURL"`
-	Model          string            `json:"model"`
-	TimeoutSeconds int               `json:"timeoutSeconds"`
-	MaxTokens      int               `json:"maxTokens"`
-	CustomHeaders  map[string]string `json:"customHeaders,omitempty"`
-	GrafanaURL     string            `json:"grafanaURL,omitempty"`
-	APIKey         string            `json:"-"`
-	GrafanaToken   string            `json:"-"`
+	EndpointURL             string            `json:"endpointURL"`
+	Model                   string            `json:"model"`
+	TimeoutSeconds          int               `json:"timeoutSeconds"`
+	MaxTokens               int               `json:"maxTokens"`
+	CustomHeaders           map[string]string `json:"customHeaders,omitempty"`
+	GrafanaURL              string            `json:"grafanaURL,omitempty"`
+	GrafanaServiceAcctToken string            `json:"grafanaServiceAccountToken,omitempty"`
+	APIKey                  string            `json:"-"`
+	GrafanaToken            string            `json:"-"`
 }
 
 // App is the main plugin instance.
@@ -61,6 +62,10 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 
 	if grafanaToken, ok := appSettings.DecryptedSecureJSONData["grafanaToken"]; ok {
 		settings.GrafanaToken = grafanaToken
+	}
+	// Also support token from jsonData for convenience
+	if settings.GrafanaToken == "" && settings.GrafanaServiceAcctToken != "" {
+		settings.GrafanaToken = settings.GrafanaServiceAcctToken
 	}
 
 	grafanaURL := settings.GrafanaURL

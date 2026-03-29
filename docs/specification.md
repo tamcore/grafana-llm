@@ -13,7 +13,6 @@ request/response schema.
 
 | Provider              | Base URL Example                                      | Auth Method      |
 | --------------------- | ----------------------------------------------------- | ---------------- |
-| IONOS AI Model Hub    | `https://openai.inference.de-txl.ionos.com/v1`        | Bearer token     |
 | OpenAI                | `https://api.openai.com/v1`                           | Bearer token     |
 | Azure OpenAI          | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | API key header |
 | Ollama                | `http://localhost:11434/v1`                            | None             |
@@ -69,8 +68,8 @@ Stored via Grafana's plugin settings API.
 
 ```json
 {
-  "endpointURL": "https://openai.inference.de-txl.ionos.com/v1",
-  "model": "gpt-oss120b",
+  "endpointURL": "https://api.openai.com/v1",
+  "model": "gpt-4o",
   "timeoutSeconds": 60,
   "maxTokens": 4096,
   "customHeaders": {}
@@ -98,8 +97,8 @@ Test the LLM connection.
 ```json
 {
   "status": "ok",
-  "model": "gpt-oss120b",
-  "provider": "https://openai.inference.de-txl.ionos.com/v1"
+  "model": "gpt-4o",
+  "provider": "https://api.openai.com/v1"
 }
 ```
 

@@ -16,7 +16,7 @@ analysis.
 - **Streaming Responses** — Real-time streaming from LLM with typing indicator
 - **Panel Menu Integration** — "Analyze with LLM" available directly from any panel's context menu
 - **Any OpenAI-compatible API** — Works with OpenAI, Azure OpenAI, Ollama, vLLM,
-  LiteLLM, IONOS AI Model Hub, and more
+  LiteLLM, and any OpenAI-compatible endpoint
 
 ### Tool Calling — Live Prometheus Queries
 
@@ -77,8 +77,8 @@ Then open Grafana at http://localhost:3000 (admin/admin).
 1. Go to **Administration → Plugins → LLM Analysis**
 2. Click **Configuration**
 3. Set:
-   - **Endpoint URL** — Base URL of your LLM API (e.g., `https://openai.inference.de-txl.ionos.com/v1`)
-   - **Model** — Model name (e.g., `openai/gpt-oss-120b`)
+   - **Endpoint URL** — Base URL of your LLM API (e.g., `https://api.openai.com/v1`)
+   - **Model** — Model name (e.g., `gpt-4o`)
    - **API Key** — Your API key (stored securely)
    - **Timeout** — Request timeout in seconds (default: 60)
    - **Max Tokens** — Maximum response tokens (default: 4096)
@@ -90,7 +90,6 @@ Then open Grafana at http://localhost:3000 (admin/admin).
 
 | Provider           | Base URL Example                                      | Auth        |
 | ------------------ | ----------------------------------------------------- | ----------- |
-| IONOS AI Model Hub | `https://openai.inference.de-txl.ionos.com/v1`        | Bearer      |
 | OpenAI             | `https://api.openai.com/v1`                           | Bearer      |
 | Azure OpenAI       | `https://{resource}.openai.azure.com/openai/...`      | API key     |
 | Ollama             | `http://localhost:11434/v1`                            | None        |

@@ -7,9 +7,9 @@ data:
   datasources.yaml: |
     apiVersion: 1
     datasources:
-      - name: VictoriaMetrics
+      - name: Prometheus
         type: prometheus
         access: proxy
-        url: http://vmsingle-victoria-metrics-k8s-stack.monitoring.svc:8428
+        url: http://prometheus-server.monitoring.svc:9090
         isDefault: true
         editable: true

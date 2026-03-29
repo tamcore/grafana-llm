@@ -28,7 +28,7 @@ func TestNewApp_ParsesSettings(t *testing.T) {
 	t.Parallel()
 
 	settings := backend.AppInstanceSettings{
-		JSONData: []byte(`{"endpointURL":"https://example.com/v1","model":"gpt-oss120b","timeoutSeconds":60,"maxTokens":4096}`),
+		JSONData: []byte(`{"endpointURL":"https://example.com/v1","model":"gpt-4o","timeoutSeconds":60,"maxTokens":4096}`),
 		DecryptedSecureJSONData: map[string]string{
 			"apiKey": "test-api-key",
 		},
@@ -48,8 +48,8 @@ func TestNewApp_ParsesSettings(t *testing.T) {
 		t.Errorf("EndpointURL = %q, want %q", app.settings.EndpointURL, "https://example.com/v1")
 	}
 
-	if app.settings.Model != "gpt-oss120b" {
-		t.Errorf("Model = %q, want %q", app.settings.Model, "gpt-oss120b")
+	if app.settings.Model != "gpt-4o" {
+		t.Errorf("Model = %q, want %q", app.settings.Model, "gpt-4o")
 	}
 
 	if app.settings.TimeoutSeconds != 60 {

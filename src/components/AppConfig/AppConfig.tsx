@@ -99,7 +99,7 @@ export function AppConfig({ plugin }: Props) {
             aria-label="Endpoint URL"
             value={state.endpointURL}
             onChange={onChangeString('endpointURL')}
-            placeholder="https://openai.inference.de-txl.ionos.com/v1"
+            placeholder="https://api.openai.com/v1"
             width={60}
           />
         </Field>
@@ -109,7 +109,7 @@ export function AppConfig({ plugin }: Props) {
             aria-label="Model"
             value={state.model}
             onChange={onChangeString('model')}
-            placeholder="gpt-oss120b"
+            placeholder="gpt-4o"
             width={40}
           />
         </Field>

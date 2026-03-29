@@ -43,17 +43,13 @@ golangci-lint run
 
 ### LLM Provider
 
-- **Provider:** IONOS Cloud AI Model Hub (OpenAI-compatible)
-- **Model:** `gpt-oss120b`
-- **Base URL:** `https://openai.inference.de-txl.ionos.com/v1`
-- Credentials stored in `.enrvrc` (not committed).
+- Any OpenAI-compatible endpoint (OpenAI, Azure OpenAI, Ollama, vLLM, LiteLLM, etc.)
+- Credentials stored in `.envrc` (not committed).
 
 ### Kubernetes Testing
 
-- **Context:** `foo`
-- **Ingress host:** `grafana.85.215.177.78.nip.io`
-- **Ingress class:** `nginx`
-- **TLS:** `cert-manager.io/cluster-issuer: letsencrypt-prod`
+- Deploy manifests in `deploy/` — update `ingress.yaml` host and `provisioning-datasources.yaml` URL for your environment.
+- Credentials and cluster-specific settings go in `.envrc`.
 
 ### Technology Stack
 

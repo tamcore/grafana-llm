@@ -28,10 +28,11 @@ type Settings struct {
 
 // App is the main plugin instance.
 type App struct {
-	httpHandler backend.CallResourceHandler
-	settings    Settings
-	logger      log.Logger
-	metrics     *metrics
+	httpHandler  backend.CallResourceHandler
+	settings     Settings
+	logger       log.Logger
+	metrics      *metrics
+	toolExecutor *ToolExecutor
 }
 
 // NewApp creates a new plugin instance from the given settings.
@@ -56,9 +57,10 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 	logger := log.DefaultLogger
 
 	app := &App{
-		settings: settings,
-		logger:   logger,
-		metrics:  newMetrics(prometheus.NewRegistry()),
+		settings:     settings,
+		logger:       logger,
+		metrics:      newMetrics(prometheus.NewRegistry()),
+		toolExecutor: NewToolExecutor("http://localhost:3000"),
 	}
 
 	app.registerRoutes()

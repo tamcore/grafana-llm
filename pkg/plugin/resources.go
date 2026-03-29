@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -19,9 +20,16 @@ type ChatRequest struct {
 
 // ChatResponse represents the chat completion response.
 type ChatResponse struct {
-	Content string `json:"content"`
-	Usage   *Usage `json:"usage,omitempty"`
-	Done    bool   `json:"done"`
+	Content  string        `json:"content"`
+	Usage    *Usage        `json:"usage,omitempty"`
+	Done     bool          `json:"done"`
+	ToolCall *ToolCallInfo `json:"toolCall,omitempty"`
+}
+
+// ToolCallInfo describes a tool invocation sent to the frontend for display.
+type ToolCallInfo struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 
 // Usage holds token usage information.
@@ -75,7 +83,26 @@ func (a *App) handleStreamResource(ctx context.Context, req *backend.CallResourc
 		return sendErrorResponse(sender, http.StatusBadRequest, err.Error())
 	}
 
-	return a.streamChatCompletion(ctx, chatReq, sender)
+	// Forward auth headers so the tool executor can query datasources
+	authHeaders := extractAuthHeaders(req.Headers)
+
+	return a.streamChatCompletion(ctx, chatReq, sender, authHeaders)
+}
+
+// extractAuthHeaders pulls authentication-related headers from the request.
+func extractAuthHeaders(headers map[string][]string) map[string]string {
+	result := make(map[string]string)
+	for _, key := range []string{"Cookie", "Authorization", "X-Grafana-Org-Id"} {
+		if vals, ok := headers[key]; ok && len(vals) > 0 {
+			result[key] = vals[0]
+		}
+		// Also check lowercase
+		lower := strings.ToLower(key)
+		if vals, ok := headers[lower]; ok && len(vals) > 0 {
+			result[key] = vals[0]
+		}
+	}
+	return result
 }
 
 func sendErrorResponse(sender backend.CallResourceResponseSender, status int, message string) error {

@@ -1,0 +1,98 @@
+package plugin
+
+import (
+	"encoding/json"
+
+	openai "github.com/sashabaranov/go-openai"
+)
+
+// llmTools returns the set of tools exposed to the LLM for data queries.
+func llmTools() []openai.Tool {
+	return []openai.Tool{
+		{
+			Type: openai.ToolTypeFunction,
+			Function: &openai.FunctionDefinition{
+				Name:        "query_prometheus",
+				Description: "Execute a PromQL query against the Prometheus/VictoriaMetrics datasource and return current metric values. Use this when you need actual numeric data to answer questions about system state, performance, or resource usage.",
+				Parameters: json.RawMessage(`{
+					"type": "object",
+					"properties": {
+						"query": {
+							"type": "string",
+							"description": "PromQL expression, e.g. rate(node_cpu_seconds_total{mode=\"idle\"}[5m])"
+						},
+						"start": {
+							"type": "string",
+							"description": "Start time as RFC3339 or relative like 'now-1h'. Defaults to now-5m."
+						},
+						"end": {
+							"type": "string",
+							"description": "End time as RFC3339 or relative like 'now'. Defaults to now."
+						},
+						"step": {
+							"type": "string",
+							"description": "Query step interval, e.g. 15s, 1m, 5m. Defaults to 60s."
+						}
+					},
+					"required": ["query"]
+				}`),
+			},
+		},
+		{
+			Type: openai.ToolTypeFunction,
+			Function: &openai.FunctionDefinition{
+				Name:        "query_loki",
+				Description: "Execute a LogQL query against the Loki datasource and return log lines or metric results. Use this to search and analyze logs.",
+				Parameters: json.RawMessage(`{
+					"type": "object",
+					"properties": {
+						"query": {
+							"type": "string",
+							"description": "LogQL expression, e.g. {namespace=\"default\"} |= \"error\""
+						},
+						"start": {
+							"type": "string",
+							"description": "Start time as RFC3339 or relative like 'now-1h'. Defaults to now-1h."
+						},
+						"end": {
+							"type": "string",
+							"description": "End time as RFC3339 or relative like 'now'. Defaults to now."
+						},
+						"limit": {
+							"type": "integer",
+							"description": "Maximum number of log lines to return. Defaults to 100."
+						}
+					},
+					"required": ["query"]
+				}`),
+			},
+		},
+		{
+			Type: openai.ToolTypeFunction,
+			Function: &openai.FunctionDefinition{
+				Name:        "list_datasources",
+				Description: "List all configured Grafana datasources with their names, types, and UIDs. Use this to discover available data sources before querying.",
+				Parameters: json.RawMessage(`{
+					"type": "object",
+					"properties": {},
+					"required": []
+				}`),
+			},
+		},
+	}
+}
+
+// ToolCallArgs holds parsed arguments for tool calls.
+type PrometheusQueryArgs struct {
+	Query string `json:"query"`
+	Start string `json:"start,omitempty"`
+	End   string `json:"end,omitempty"`
+	Step  string `json:"step,omitempty"`
+}
+
+type LokiQueryArgs struct {
+	Query string `json:"query"`
+	Start string `json:"start,omitempty"`
+	End   string `json:"end,omitempty"`
+	Limit int    `json:"limit,omitempty"`
+}

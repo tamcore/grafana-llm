@@ -8,14 +8,21 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 
 interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'tool';
   content: string;
+  toolName?: string;
+}
+
+interface ToolCallStatus {
+  name: string;
+  arguments: string;
 }
 
 interface Props {
   messages: ChatMessage[];
   isStreaming: boolean;
   streamContent: string;
+  activeToolCalls?: ToolCallStatus[];
 }
 
 function MarkdownContent({ content }: { content: string }) {
@@ -27,7 +34,31 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-export function ChatView({ messages, isStreaming, streamContent }: Props) {
+const toolNameLabels: Record<string, string> = {
+  query_prometheus: '📊 Querying Prometheus',
+  query_loki: '📋 Querying Loki',
+  list_datasources: '🔍 Listing datasources',
+};
+
+function ToolCallBadge({ name, arguments: args }: ToolCallStatus) {
+  const styles = useStyles2(getStyles);
+  const label = toolNameLabels[name] || `🔧 ${name}`;
+  let detail = '';
+  try {
+    const parsed = JSON.parse(args);
+    detail = parsed.query || '';
+  } catch {
+    // ignore
+  }
+  return (
+    <div data-testid="tool-call" className={styles.toolCall}>
+      <span className={styles.toolCallLabel}>{label}</span>
+      {detail && <code className={styles.toolCallQuery}>{detail}</code>}
+    </div>
+  );
+}
+
+export function ChatView({ messages, isStreaming, streamContent, activeToolCalls }: Props) {
   const styles = useStyles2(getStyles);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +87,14 @@ export function ChatView({ messages, isStreaming, streamContent }: Props) {
         <div className={styles.assistantMessage}>
           <div className={styles.role}>Assistant</div>
           <div className={styles.content}>
-            <MarkdownContent content={streamContent} />
+            {activeToolCalls && activeToolCalls.length > 0 && (
+              <div className={styles.toolCallsContainer}>
+                {activeToolCalls.map((tc, i) => (
+                  <ToolCallBadge key={i} name={tc.name} arguments={tc.arguments} />
+                ))}
+              </div>
+            )}
+            {streamContent && <MarkdownContent content={streamContent} />}
             <span className={styles.cursor}>▌</span>
           </div>
         </div>
@@ -165,6 +203,36 @@ function getStyles(theme: GrafanaTheme2) {
       '@keyframes blink': {
         '50%': { opacity: 0 },
       },
+    }),
+    toolCall: css({
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+      padding: `${theme.spacing(0.5)} ${theme.spacing(1)}`,
+      borderRadius: theme.shape.radius.default,
+      backgroundColor: theme.colors.background.secondary,
+      border: `1px solid ${theme.colors.border.medium}`,
+      marginBottom: theme.spacing(0.5),
+      fontSize: theme.typography.bodySmall.fontSize,
+    }),
+    toolCallLabel: css({
+      fontWeight: theme.typography.fontWeightMedium,
+      color: theme.colors.text.primary,
+    }),
+    toolCallQuery: css({
+      fontFamily: theme.typography.fontFamilyMonospace,
+      fontSize: '0.85em',
+      color: theme.colors.text.secondary,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      maxWidth: '500px',
+    }),
+    toolCallsContainer: css({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: theme.spacing(0.5),
+      marginBottom: theme.spacing(1),
     }),
   };
 }

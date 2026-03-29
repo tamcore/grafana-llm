@@ -71,6 +71,11 @@ export interface ChatRequest {
   context: AnalysisContext;
 }
 
+export interface ToolCallInfo {
+  name: string;
+  arguments: string;
+}
+
 export interface ChatResponse {
   content: string;
   done: boolean;
@@ -78,4 +83,5 @@ export interface ChatResponse {
     prompt_tokens: number;
     completion_tokens: number;
   };
+  toolCall?: ToolCallInfo;
 }

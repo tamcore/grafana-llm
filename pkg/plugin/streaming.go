@@ -13,8 +13,11 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-// streamChatCompletion sends a streaming chat completion request and relays chunks via the sender.
-func (a *App) streamChatCompletion(ctx context.Context, req ChatRequest, sender backend.CallResourceResponseSender) error {
+const maxToolRounds = 5
+
+// streamChatCompletion sends a streaming chat completion request with tool-calling
+// support and relays chunks via the sender.
+func (a *App) streamChatCompletion(ctx context.Context, req ChatRequest, sender backend.CallResourceResponseSender, authHeaders map[string]string) error {
 	systemPrompt := buildSystemPrompt(req.Mode, req.Context)
 
 	messages := []openai.ChatCompletionMessage{
@@ -24,27 +27,84 @@ func (a *App) streamChatCompletion(ctx context.Context, req ChatRequest, sender 
 
 	config := openai.DefaultConfig(a.settings.APIKey)
 	config.BaseURL = strings.TrimSuffix(a.settings.EndpointURL, "/")
-
 	client := openai.NewClientWithConfig(config)
+	tools := llmTools()
 
+	for round := 0; round < maxToolRounds; round++ {
+		ccReq := openai.ChatCompletionRequest{
+			Model:     a.settings.Model,
+			Messages:  messages,
+			MaxTokens: a.settings.MaxTokens,
+			Tools:     tools,
+		}
+
+		// First, make a non-streaming request to check if we get tool_calls
+		resp, err := client.CreateChatCompletion(ctx, ccReq)
+		if err != nil {
+			return fmt.Errorf("chat completion (round %d): %w", round, err)
+		}
+
+		if len(resp.Choices) == 0 {
+			return fmt.Errorf("no choices in response (round %d)", round)
+		}
+
+		choice := resp.Choices[0]
+
+		// If the model wants to call tools, execute them and loop
+		if choice.FinishReason == openai.FinishReasonToolCalls && len(choice.Message.ToolCalls) > 0 {
+			// Add assistant's tool_calls message to history
+			messages = append(messages, choice.Message)
+
+			for _, tc := range choice.Message.ToolCalls {
+				// Notify the frontend about the tool call
+				if err := sendStreamChunk(sender, ChatResponse{
+					Content:  "",
+					ToolCall: &ToolCallInfo{Name: tc.Function.Name, Arguments: tc.Function.Arguments},
+				}); err != nil {
+					return err
+				}
+
+				result, execErr := a.toolExecutor.Execute(ctx, tc.Function.Name, tc.Function.Arguments, authHeaders)
+				if execErr != nil {
+					result = fmt.Sprintf("Error: %s", execErr.Error())
+				}
+
+				// Add tool result to message history
+				messages = append(messages, openai.ChatCompletionMessage{
+					Role:       openai.ChatMessageRoleTool,
+					Content:    result,
+					ToolCallID: tc.ID,
+				})
+			}
+
+			continue // Next round with tool results
+		}
+
+		// Model returned content — stream it to the frontend
+		return a.streamFinalResponse(ctx, client, messages, tools, sender)
+	}
+
+	return fmt.Errorf("exceeded maximum tool-calling rounds (%d)", maxToolRounds)
+}
+
+// streamFinalResponse re-issues the request as a stream to get the final content response.
+func (a *App) streamFinalResponse(ctx context.Context, client *openai.Client, messages []openai.ChatCompletionMessage, tools []openai.Tool, sender backend.CallResourceResponseSender) error {
 	stream, err := client.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
 		Model:     a.settings.Model,
 		Messages:  messages,
 		MaxTokens: a.settings.MaxTokens,
+		Tools:     tools,
 		Stream:    true,
 	})
 	if err != nil {
-		return fmt.Errorf("create chat completion stream: %w", err)
+		return fmt.Errorf("create stream: %w", err)
 	}
 	defer func() { _ = stream.Close() }()
 
 	for {
 		response, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
-			return sendStreamChunk(sender, ChatResponse{
-				Content: "",
-				Done:    true,
-			})
+			return sendStreamChunk(sender, ChatResponse{Content: "", Done: true})
 		}
 		if err != nil {
 			return fmt.Errorf("recv stream chunk: %w", err)
@@ -53,7 +113,6 @@ func (a *App) streamChatCompletion(ctx context.Context, req ChatRequest, sender 
 		if len(response.Choices) > 0 {
 			chunk := ChatResponse{
 				Content: response.Choices[0].Delta.Content,
-				Done:    false,
 			}
 			if err := sendStreamChunk(sender, chunk); err != nil {
 				return err

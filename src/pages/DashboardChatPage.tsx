@@ -86,6 +86,7 @@ export function DashboardChatPage() {
   const [streamContent, setStreamContent] = useState('');
   const [prompt, setPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [activeToolCalls, setActiveToolCalls] = useState<Array<{ name: string; arguments: string }>>([]);
 
   // Fetch dashboard list
   useEffect(() => {
@@ -138,12 +139,17 @@ export function DashboardChatPage() {
       setPrompt('');
       setIsStreaming(true);
       setStreamContent('');
+      setActiveToolCalls([]);
 
       try {
         let fullContent = '';
         for await (const chunk of streamChat('summarize_dashboard', userMessage.content, dashboardContext)) {
           if (chunk.done) {
             break;
+          }
+          if (chunk.toolCall) {
+            setActiveToolCalls((prev) => [...prev, chunk.toolCall!]);
+            continue;
           }
           fullContent += chunk.content;
           setStreamContent(fullContent);
@@ -163,6 +169,7 @@ export function DashboardChatPage() {
       } finally {
         setIsStreaming(false);
         setStreamContent('');
+        setActiveToolCalls([]);
       }
     },
     [prompt, dashboardContext, isStreaming]
@@ -199,7 +206,7 @@ export function DashboardChatPage() {
 
       {loading && <p>Loading dashboard...</p>}
 
-      <ChatView messages={messages} isStreaming={isStreaming} streamContent={streamContent} />
+      <ChatView messages={messages} isStreaming={isStreaming} streamContent={streamContent} activeToolCalls={activeToolCalls} />
 
       <form onSubmit={onSubmit} className={styles.form}>
         <div className={styles.inputRow}>

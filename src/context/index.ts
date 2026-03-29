@@ -10,5 +10,6 @@ export type {
   MetricsContext,
   ChatRequest,
   ChatResponse,
+  ToolCallInfo,
   TimeRange,
 } from './types';

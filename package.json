@@ -8,7 +8,7 @@
     "test": "jest --passWithNoTests",
     "test:ci": "jest --passWithNoTests --maxWorkers 4",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --cache --ext .js,.jsx,.ts,.tsx ./src",
+    "lint": "eslint --cache ./src",
     "lint:fix": "eslint --cache --fix --ext .js,.jsx,.ts,.tsx ./src",
     "backend:build": "mage -v",
     "server": "docker compose up --build"
@@ -16,6 +16,8 @@
   "author": "tamcore",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@eslint/compat": "^2.0.3",
+    "@eslint/eslintrc": "^3.3.5",
     "@grafana/eslint-config": "^8.0.0",
     "@grafana/tsconfig": "^2.0.0",
     "@swc/core": "^1.11.0",

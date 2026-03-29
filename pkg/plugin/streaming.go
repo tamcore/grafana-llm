@@ -22,8 +22,23 @@ func (a *App) streamChatCompletion(ctx context.Context, req ChatRequest, sender 
 
 	messages := []openai.ChatCompletionMessage{
 		{Role: openai.ChatMessageRoleSystem, Content: systemPrompt},
-		{Role: openai.ChatMessageRoleUser, Content: req.Prompt},
 	}
+
+	// Append prior conversation history for multi-turn context.
+	for _, m := range req.Messages {
+		if m.Role == "user" || m.Role == "assistant" {
+			messages = append(messages, openai.ChatCompletionMessage{
+				Role:    m.Role,
+				Content: m.Content,
+			})
+		}
+	}
+
+	// Append the current user prompt.
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: req.Prompt,
+	})
 
 	config := openai.DefaultConfig(a.settings.APIKey)
 	config.BaseURL = strings.TrimSuffix(a.settings.EndpointURL, "/")
@@ -95,6 +110,7 @@ func (a *App) streamChatCompletion(ctx context.Context, req ChatRequest, sender 
 }
 
 // streamFinalResponse re-issues the request as a stream to get the final content response.
+// It includes token usage estimates in the final done chunk.
 func (a *App) streamFinalResponse(ctx context.Context, client *openai.Client, messages []openai.ChatCompletionMessage, tools []openai.Tool, sender backend.CallResourceResponseSender) error {
 	stream, err := client.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
 		Model:     a.settings.Model,
@@ -108,24 +124,44 @@ func (a *App) streamFinalResponse(ctx context.Context, client *openai.Client, me
 	}
 	defer func() { _ = stream.Close() }()
 
+	var completionContent strings.Builder
+
 	for {
 		response, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
-			return sendStreamChunk(sender, ChatResponse{Content: "", Done: true})
+			// Include the streamed completion in the token estimate.
+			messages = append(messages, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleAssistant,
+				Content: completionContent.String(),
+			})
+			tokens := estimateMessagesTokens(messages)
+			return sendStreamChunk(sender, ChatResponse{
+				Content:       "",
+				Done:          true,
+				ContextTokens: tokens,
+				MaxTokens:     a.settings.MaxContextTokens,
+			})
 		}
 		if err != nil {
-			// Stream error after partial content — still send done so
-			// the frontend commits whatever it received.
 			a.logger.Error("Stream recv error, sending done", "error", err)
-			_ = sendStreamChunk(sender, ChatResponse{Content: "", Done: true})
+			messages = append(messages, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleAssistant,
+				Content: completionContent.String(),
+			})
+			tokens := estimateMessagesTokens(messages)
+			_ = sendStreamChunk(sender, ChatResponse{
+				Content:       "",
+				Done:          true,
+				ContextTokens: tokens,
+				MaxTokens:     a.settings.MaxContextTokens,
+			})
 			return nil
 		}
 
 		if len(response.Choices) > 0 {
-			chunk := ChatResponse{
-				Content: response.Choices[0].Delta.Content,
-			}
-			if err := sendStreamChunk(sender, chunk); err != nil {
+			delta := response.Choices[0].Delta.Content
+			completionContent.WriteString(delta)
+			if err := sendStreamChunk(sender, ChatResponse{Content: delta}); err != nil {
 				return err
 			}
 		}

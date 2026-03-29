@@ -147,6 +147,187 @@ func TestStreamingChat_MissingPrompt(t *testing.T) {
 	}
 }
 
+func TestStreamingChat_ConversationHistory(t *testing.T) {
+	t.Parallel()
+
+	var receivedMessages []interface{}
+	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bodyBytes, _ := io.ReadAll(r.Body)
+		var reqBody map[string]interface{}
+		_ = json.Unmarshal(bodyBytes, &reqBody)
+
+		isStream, _ := reqBody["stream"].(bool)
+		messages, _ := reqBody["messages"].([]interface{})
+
+		if !isStream {
+			// Capture the messages sent to the LLM for verification
+			receivedMessages = messages
+
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"choices": []map[string]interface{}{
+					{
+						"index": 0,
+						"message": map[string]interface{}{
+							"role":    "assistant",
+							"content": "Follow-up answer",
+						},
+						"finish_reason": "stop",
+					},
+				},
+			})
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher := w.(http.Flusher)
+		_, _ = w.Write([]byte(`data: {"choices":[{"delta":{"content":"Follow-up answer"}}]}` + "\n\n"))
+		flusher.Flush()
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+		flusher.Flush()
+	}))
+	defer llmServer.Close()
+
+	app := newTestApp(t, llmServer.URL+"/v1", "key")
+
+	chatReq := `{
+		"mode": "chat",
+		"prompt": "What about memory?",
+		"context": {},
+		"messages": [
+			{"role": "user", "content": "How is the cluster?"},
+			{"role": "assistant", "content": "CPU is at 45%."}
+		]
+	}`
+
+	req := &backend.CallResourceRequest{
+		Path:   "chat/stream",
+		Method: http.MethodPost,
+		Body:   []byte(chatReq),
+	}
+
+	var responses []*backend.CallResourceResponse
+	sender := backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		cp := &backend.CallResourceResponse{
+			Status:  res.Status,
+			Headers: res.Headers,
+			Body:    make([]byte, len(res.Body)),
+		}
+		copy(cp.Body, res.Body)
+		responses = append(responses, cp)
+		return nil
+	})
+
+	err := app.CallResource(context.Background(), req, sender)
+	if err != nil {
+		t.Fatalf("CallResource returned error: %v", err)
+	}
+
+	// Verify conversation history was included in messages to LLM.
+	// Expected: system, user("How is the cluster?"), assistant("CPU is at 45%."), user("What about memory?")
+	if len(receivedMessages) < 4 {
+		t.Fatalf("expected at least 4 messages, got %d", len(receivedMessages))
+	}
+
+	// Check that the second message is the first history user message
+	msg1, _ := receivedMessages[1].(map[string]interface{})
+	if msg1["role"] != "user" || msg1["content"] != "How is the cluster?" {
+		t.Errorf("message[1] = %v, want user/How is the cluster?", msg1)
+	}
+
+	// Check that the third message is the assistant history
+	msg2, _ := receivedMessages[2].(map[string]interface{})
+	if msg2["role"] != "assistant" || msg2["content"] != "CPU is at 45%." {
+		t.Errorf("message[2] = %v, want assistant/CPU is at 45%%.", msg2)
+	}
+
+	// Check that the fourth message is the current prompt
+	msg3, _ := receivedMessages[3].(map[string]interface{})
+	if msg3["role"] != "user" || msg3["content"] != "What about memory?" {
+		t.Errorf("message[3] = %v, want user/What about memory?", msg3)
+	}
+}
+
+func TestStreamingChat_ReturnsTokenCounts(t *testing.T) {
+	t.Parallel()
+
+	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bodyBytes, _ := io.ReadAll(r.Body)
+		var reqBody map[string]interface{}
+		_ = json.Unmarshal(bodyBytes, &reqBody)
+
+		isStream, _ := reqBody["stream"].(bool)
+
+		if !isStream {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"choices": []map[string]interface{}{
+					{
+						"index":         0,
+						"message":       map[string]interface{}{"role": "assistant", "content": "Done."},
+						"finish_reason": "stop",
+					},
+				},
+			})
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher := w.(http.Flusher)
+		_, _ = w.Write([]byte(`data: {"choices":[{"delta":{"content":"Done."}}]}` + "\n\n"))
+		flusher.Flush()
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+		flusher.Flush()
+	}))
+	defer llmServer.Close()
+
+	app := newTestApp(t, llmServer.URL+"/v1", "key")
+
+	chatReq := `{"mode":"chat","prompt":"test","context":{}}`
+
+	req := &backend.CallResourceRequest{
+		Path:   "chat/stream",
+		Method: http.MethodPost,
+		Body:   []byte(chatReq),
+	}
+
+	var responses []*backend.CallResourceResponse
+	sender := backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		cp := &backend.CallResourceResponse{
+			Status: res.Status, Headers: res.Headers,
+			Body: make([]byte, len(res.Body)),
+		}
+		copy(cp.Body, res.Body)
+		responses = append(responses, cp)
+		return nil
+	})
+
+	err := app.CallResource(context.Background(), req, sender)
+	if err != nil {
+		t.Fatalf("CallResource returned error: %v", err)
+	}
+
+	// Find the done chunk and check it has token info
+	var doneChunk ChatResponse
+	for _, resp := range responses {
+		var chunk ChatResponse
+		if err := json.Unmarshal(resp.Body, &chunk); err != nil {
+			continue
+		}
+		if chunk.Done {
+			doneChunk = chunk
+			break
+		}
+	}
+
+	if doneChunk.ContextTokens <= 0 {
+		t.Errorf("expected positive ContextTokens, got %d", doneChunk.ContextTokens)
+	}
+	if doneChunk.MaxTokens <= 0 {
+		t.Errorf("expected positive MaxTokens, got %d", doneChunk.MaxTokens)
+	}
+}
+
 func TestStreamingChat_ToolCalling(t *testing.T) {
 	t.Parallel()
 

@@ -15,8 +15,23 @@ func (a *App) chatCompletion(ctx context.Context, req ChatRequest) (string, *Usa
 
 	messages := []openai.ChatCompletionMessage{
 		{Role: openai.ChatMessageRoleSystem, Content: systemPrompt},
-		{Role: openai.ChatMessageRoleUser, Content: req.Prompt},
 	}
+
+	// Append prior conversation history for multi-turn context.
+	for _, m := range req.Messages {
+		if m.Role == "user" || m.Role == "assistant" {
+			messages = append(messages, openai.ChatCompletionMessage{
+				Role:    m.Role,
+				Content: m.Content,
+			})
+		}
+	}
+
+	// Append the current user prompt.
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: req.Prompt,
+	})
 
 	config := openai.DefaultConfig(a.settings.APIKey)
 	config.BaseURL = strings.TrimSuffix(a.settings.EndpointURL, "/")

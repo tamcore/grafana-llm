@@ -11,19 +11,28 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
 )
 
+// ChatMessage represents a single message in a conversation.
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 // ChatRequest represents an incoming chat analysis request.
 type ChatRequest struct {
-	Mode    string          `json:"mode"`
-	Prompt  string          `json:"prompt"`
-	Context json.RawMessage `json:"context"`
+	Mode     string          `json:"mode"`
+	Prompt   string          `json:"prompt"`
+	Context  json.RawMessage `json:"context"`
+	Messages []ChatMessage   `json:"messages,omitempty"`
 }
 
 // ChatResponse represents the chat completion response.
 type ChatResponse struct {
-	Content  string        `json:"content"`
-	Usage    *Usage        `json:"usage,omitempty"`
-	Done     bool          `json:"done"`
-	ToolCall *ToolCallInfo `json:"toolCall,omitempty"`
+	Content       string        `json:"content"`
+	Usage         *Usage        `json:"usage,omitempty"`
+	Done          bool          `json:"done"`
+	ToolCall      *ToolCallInfo `json:"toolCall,omitempty"`
+	ContextTokens int           `json:"contextTokens,omitempty"`
+	MaxTokens     int           `json:"maxTokens,omitempty"`
 }
 
 // ToolCallInfo describes a tool invocation sent to the frontend for display.

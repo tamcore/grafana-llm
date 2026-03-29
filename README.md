@@ -4,20 +4,30 @@ A Grafana app plugin that wires OpenAI-compatible LLM endpoints into Grafana for
 dashboard analysis, panel explanation, Prometheus metrics analysis, and Loki log
 analysis.
 
-![Kubernetes Cluster Overview](docs/screenshots/cluster-overview.png)
-
 ## Features
 
-- **Explain Panel** — Get AI-powered explanations of what a panel shows
+- **Explain Panel** — Get AI-powered explanations of any panel's data
 - **Summarize Dashboard** — Generate dashboard-level summaries
 - **Analyze Logs** — Ask questions about Loki log data
 - **Analyze Metrics** — Ask questions about Prometheus metrics
-- **Streaming Responses** — Real-time SSE streaming from LLM
+- **Chat with Dashboard** — Select any dashboard and have a conversation about its panels, queries, and data
+- **Markdown Rendering** — LLM responses render with full markdown: headers, tables, code blocks, lists
+- **Streaming Responses** — Real-time streaming from LLM with typing indicator
 - **Panel Menu Integration** — "Analyze with LLM" available directly from any panel's context menu
 - **Any OpenAI-compatible API** — Works with OpenAI, Azure OpenAI, Ollama, vLLM,
   LiteLLM, IONOS AI Model Hub, and more
 
-![Panel Menu Extension](docs/screenshots/panel-menu-extension.png)
+### LLM Analysis — Panel Explanation
+
+Provide panel context and get structured, actionable analysis with recommendations:
+
+![LLM Analysis](docs/screenshots/plugin-analyze.png)
+
+### Chat with Dashboard
+
+Select any dashboard and ask questions — the plugin automatically extracts all panels, queries, and metadata:
+
+![Dashboard Chat](docs/screenshots/dashboard-chat.png)
 
 ## Requirements
 
@@ -67,8 +77,6 @@ Then open Grafana at http://localhost:3000 (admin/admin).
    - **Max Tokens** — Maximum response tokens (default: 4096)
 4. Click **Test Connection** to verify
 5. Click **Save settings**
-
-![Plugin Configuration](docs/screenshots/plugin-config.png)
 
 ## Supported Providers
 
@@ -137,7 +145,7 @@ The plugin exposes Prometheus metrics:
 │       ├── security.go     # Input sanitization
 │       └── metrics.go      # Prometheus metrics
 ├── src/                    # React frontend
-│   ├── module.ts           # Plugin entry point
+│   ├── module.tsx           # Plugin entry point
 │   ├── api/                # Backend API client
 │   ├── context/            # Context builder and types
 │   ├── components/         # UI components

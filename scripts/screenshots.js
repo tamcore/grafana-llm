@@ -9,30 +9,30 @@ const OUT_DIR = path.join(__dirname, '..', 'docs', 'screenshots');
 const PAGES = [
   {
     name: 'cluster-overview',
-    path: '/d/bfhgtzow3ug3ka/kubernetes-cluster-overview?orgId=1&kiosk',
+    path: '/d/k8s-cluster-overview/kubernetes-cluster-overview?orgId=1&from=now-3h&to=now&kiosk',
     width: 1600,
     height: 1000,
-    delay: 8000,
+    delay: 15000,
   },
   {
     name: 'node-metrics',
-    path: '/d/afhgu1eiunkzke/node-metrics-deep-dive?orgId=1&kiosk',
+    path: '/d/node-metrics/node-metrics-deep-dive?orgId=1&from=now-3h&to=now',
     width: 1600,
-    height: 1200,
-    delay: 8000,
+    height: 900,
+    delay: 15000,
   },
   {
     name: 'pod-workloads',
-    path: '/d/efhgu2yrfuubkc/pod-and-workload-metrics?orgId=1&kiosk',
+    path: '/d/pod-workloads/pod-and-workload-metrics?orgId=1&from=now-3h&to=now',
     width: 1600,
-    height: 1100,
-    delay: 8000,
+    height: 900,
+    delay: 15000,
   },
   {
     name: 'plugin-config',
-    path: '/a/tamcore-llmanalysis-app/?tab=configuration',
+    path: '/plugins/tamcore-llmanalysis-app',
     width: 1280,
-    height: 800,
+    height: 960,
     delay: 4000,
   },
   {
@@ -82,6 +82,55 @@ const PAGES = [
     const outPath = path.join(OUT_DIR, `${entry.name}.png`);
     await page.screenshot({ path: outPath, fullPage: true });
     console.log(`  → ${outPath}`);
+  }
+
+  // Capture panel menu extension screenshot
+  console.log('Capturing panel-menu-extension…');
+  await page.setViewport({ width: 1600, height: 1000 });
+  await page.goto(`${BASE_URL}/d/k8s-cluster-overview/kubernetes-cluster-overview?orgId=1`, {
+    waitUntil: 'networkidle2',
+    timeout: 30000,
+  });
+  await new Promise((r) => setTimeout(r, 10000));
+
+  try {
+    // Find and click the panel menu button (kebab icon) for "Cluster CPU Usage"
+    const menuBtn = await page.$('[data-testid="data-testid Panel menu Cluster CPU Usage"]');
+    if (menuBtn) {
+      await menuBtn.click();
+      await new Promise((r) => setTimeout(r, 1000));
+
+      // Look for "More..." or "Extensions" submenu to find our link
+      const moreBtn = await page.evaluateHandle(() => {
+        const items = document.querySelectorAll('[role="menuitem"]');
+        for (const item of items) {
+          if (item.textContent.includes('More') || item.textContent.includes('Extension')) {
+            return item;
+          }
+        }
+        return null;
+      });
+
+      if (moreBtn && moreBtn.asElement()) {
+        await moreBtn.asElement().click();
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    } else {
+      // Fallback: find any panel menu trigger
+      const allMenuBtns = await page.$$('[aria-label="Menu for panel"]');
+      if (allMenuBtns.length > 0) {
+        await allMenuBtns[0].click();
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+
+    await page.screenshot({
+      path: path.join(OUT_DIR, 'panel-menu-extension.png'),
+      fullPage: false,
+    });
+    console.log('  → panel-menu-extension.png');
+  } catch (err) {
+    console.log('  ⚠ Could not capture panel menu:', err.message);
   }
 
   await browser.close();

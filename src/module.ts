@@ -13,57 +13,42 @@ export const plugin = new AppPlugin<{}>()
     body: AppConfig,
     id: 'configuration',
   })
-  .addLink({
+  .addLink<PluginExtensionPanelContext>({
     title: 'Analyze with LLM',
     description: 'Send this panel to AI for analysis',
     targets: [PluginExtensionPoints.DashboardPanelMenu],
-    configure: (context) => {
-      return {
-        icon: 'ai' as const,
-        category: 'LLM',
-        onClick: (event, helpers) => {
-          const panelContext = helpers?.context as PluginExtensionPanelContext | undefined;
-          if (helpers?.openModal) {
-            helpers.openModal({
-              title: '🤖 Analyze Panel with LLM',
-              body: ({ onDismiss }) =>
-                React.createElement(PanelAnalysisModal, { context: panelContext, onDismiss }),
-              width: '60%',
-              height: '80vh',
-            });
-          }
-        },
-      };
+    category: 'Extensions',
+    onClick: (event, helpers) => {
+      const panelContext = helpers?.context;
+      if (helpers?.openModal) {
+        helpers.openModal({
+          title: '🤖 Analyze Panel with LLM',
+          body: ({ onDismiss }) =>
+            React.createElement(PanelAnalysisModal, { context: panelContext, onDismiss }),
+          width: '60%',
+          height: '80vh',
+        });
+      }
     },
   })
   .addLink({
     title: 'Analyze with LLM',
     description: 'Analyze current query results with AI',
     targets: [PluginExtensionPoints.ExploreToolbarAction],
-    configure: () => {
-      return {
-        icon: 'ai' as const,
-        onClick: (_event, helpers) => {
-          if (helpers?.openModal) {
-            helpers.openModal({
-              title: '🤖 Analyze with LLM',
-              body: ({ onDismiss }) => React.createElement(ExploreAnalysisModal, { onDismiss }),
-              width: '60%',
-              height: '80vh',
-            });
-          }
-        },
-      };
+    onClick: (_event, helpers) => {
+      if (helpers?.openModal) {
+        helpers.openModal({
+          title: '🤖 Analyze with LLM',
+          body: ({ onDismiss }) => React.createElement(ExploreAnalysisModal, { onDismiss }),
+          width: '60%',
+          height: '80vh',
+        });
+      }
     },
   })
   .addLink({
     title: 'LLM Analysis',
     description: 'Open LLM Analysis page',
     targets: [PluginExtensionPoints.CommandPalette],
-    configure: () => {
-      return {
-        path: `/a/${PLUGIN_ID}`,
-        icon: 'ai' as const,
-      };
-    },
+    path: `/a/${PLUGIN_ID}`,
   });

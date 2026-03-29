@@ -60,12 +60,18 @@ func (a *App) handleStreamResource(ctx context.Context, req *backend.CallResourc
 		return sendErrorResponse(sender, http.StatusBadRequest, "invalid request body: "+err.Error())
 	}
 
+	chatReq.Prompt = sanitizePrompt(chatReq.Prompt)
+
 	if chatReq.Prompt == "" {
 		return sendErrorResponse(sender, http.StatusBadRequest, "prompt is required")
 	}
 
 	if !validModes[chatReq.Mode] {
 		return sendErrorResponse(sender, http.StatusBadRequest, "invalid mode: "+chatReq.Mode)
+	}
+
+	if _, err := sanitizeContextSize(chatReq.Context, maxContextBytes); err != nil {
+		return sendErrorResponse(sender, http.StatusBadRequest, err.Error())
 	}
 
 	return a.streamChatCompletion(ctx, chatReq, sender)
@@ -117,6 +123,8 @@ func (a *App) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Prompt = sanitizePrompt(req.Prompt)
+
 	if req.Prompt == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "prompt is required",
@@ -127,6 +135,13 @@ func (a *App) handleChat(w http.ResponseWriter, r *http.Request) {
 	if !validModes[req.Mode] {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "invalid mode: " + req.Mode,
+		})
+		return
+	}
+
+	if _, err := sanitizeContextSize(req.Context, maxContextBytes); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
 		})
 		return
 	}

@@ -67,11 +67,12 @@ func sendStreamChunk(sender backend.CallResourceResponseSender, chunk ChatRespon
 	if err != nil {
 		return fmt.Errorf("marshal chunk: %w", err)
 	}
+	body = append(body, '\n')
 
 	return sender.Send(&backend.CallResourceResponse{
 		Status: http.StatusOK,
 		Headers: map[string][]string{
-			"Content-Type": {"application/json"},
+			"Content-Type": {"application/x-ndjson"},
 		},
 		Body: body,
 	})

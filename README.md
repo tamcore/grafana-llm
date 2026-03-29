@@ -4,6 +4,8 @@ A Grafana app plugin that wires OpenAI-compatible LLM endpoints into Grafana for
 dashboard analysis, panel explanation, Prometheus metrics analysis, and Loki log
 analysis.
 
+![Kubernetes Cluster Overview](docs/screenshots/cluster-overview.png)
+
 ## Features
 
 - **Explain Panel** — Get AI-powered explanations of what a panel shows
@@ -11,8 +13,11 @@ analysis.
 - **Analyze Logs** — Ask questions about Loki log data
 - **Analyze Metrics** — Ask questions about Prometheus metrics
 - **Streaming Responses** — Real-time SSE streaming from LLM
+- **Panel Menu Integration** — "Analyze with LLM" available directly from any panel's context menu
 - **Any OpenAI-compatible API** — Works with OpenAI, Azure OpenAI, Ollama, vLLM,
   LiteLLM, IONOS AI Model Hub, and more
+
+![Panel Menu Extension](docs/screenshots/panel-menu-extension.png)
 
 ## Requirements
 
@@ -56,12 +61,14 @@ Then open Grafana at http://localhost:3000 (admin/admin).
 2. Click **Configuration**
 3. Set:
    - **Endpoint URL** — Base URL of your LLM API (e.g., `https://openai.inference.de-txl.ionos.com/v1`)
-   - **Model** — Model name (e.g., `gpt-oss120b`)
+   - **Model** — Model name (e.g., `openai/gpt-oss-120b`)
    - **API Key** — Your API key (stored securely)
    - **Timeout** — Request timeout in seconds (default: 60)
    - **Max Tokens** — Maximum response tokens (default: 4096)
 4. Click **Test Connection** to verify
 5. Click **Save settings**
+
+![Plugin Configuration](docs/screenshots/plugin-config.png)
 
 ## Supported Providers
 

@@ -1,6 +1,5 @@
 import { AppPlugin, AppRootProps, PluginExtensionPanelContext } from '@grafana/data';
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
 import { AppConfig } from './components/AppConfig';
 import { AnalyzePage, DashboardChatPage } from './pages';
 import { PanelAnalysisModal, ExploreAnalysisModal } from './extensions/AnalysisModal';
@@ -11,14 +10,12 @@ const PANEL_MENU_TARGET = 'grafana/dashboard/panel/menu';
 const EXPLORE_TOOLBAR_TARGET = 'grafana/explore/toolbar/action';
 const COMMAND_PALETTE_TARGET = 'grafana/commandpalette/action';
 
-function AppRoot(_props: AppRootProps) {
-  return (
-    <Routes>
-      <Route path="analyze" element={<AnalyzePage />} />
-      <Route path="dashboard-chat" element={<DashboardChatPage />} />
-      <Route path="*" element={<AnalyzePage />} />
-    </Routes>
-  );
+function AppRoot(props: AppRootProps) {
+  const path = props.path || window.location.pathname;
+  if (path.includes('dashboard-chat')) {
+    return <DashboardChatPage />;
+  }
+  return <AnalyzePage />;
 }
 
 export const plugin = new AppPlugin<{}>()

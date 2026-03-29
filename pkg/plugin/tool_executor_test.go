@@ -347,3 +347,97 @@ func TestToolExecutor_GetDashboard_MissingUID(t *testing.T) {
 		t.Fatal("expected error for missing UID")
 	}
 }
+
+func TestToolExecutor_ListAlerts(t *testing.T) {
+	t.Parallel()
+
+	grafanaMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/datasources":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+				{"name": "Alertmanager", "type": "alertmanager", "uid": "am-uid"},
+			})
+		default:
+			// Alertmanager proxy endpoint
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+				{
+					"labels":      map[string]string{"alertname": "HighCPU", "severity": "critical", "namespace": "default"},
+					"annotations": map[string]string{"summary": "CPU usage is above 90%"},
+					"state":       "firing",
+					"startsAt":    "2026-03-29T10:00:00Z",
+				},
+				{
+					"labels":      map[string]string{"alertname": "HighMemory", "severity": "warning"},
+					"annotations": map[string]string{"summary": "Memory usage is above 80%"},
+					"state":       "firing",
+					"startsAt":    "2026-03-29T11:00:00Z",
+				},
+			})
+		}
+	}))
+	defer grafanaMock.Close()
+
+	te := NewToolExecutor(grafanaMock.URL, log.DefaultLogger)
+	result, err := te.Execute(context.Background(), "list_alerts", `{}`, nil)
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	var alerts []map[string]interface{}
+	if err := json.Unmarshal([]byte(result), &alerts); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+
+	if len(alerts) != 2 {
+		t.Fatalf("expected 2 alerts, got %d", len(alerts))
+	}
+}
+
+func TestToolExecutor_ListAlerts_WithFilter(t *testing.T) {
+	t.Parallel()
+
+	var receivedFilter string
+	grafanaMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/datasources":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+				{"name": "Alertmanager", "type": "alertmanager", "uid": "am-uid"},
+			})
+		default:
+			receivedFilter = r.URL.Query().Get("filter")
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{})
+		}
+	}))
+	defer grafanaMock.Close()
+
+	te := NewToolExecutor(grafanaMock.URL, log.DefaultLogger)
+	_, err := te.Execute(context.Background(), "list_alerts", `{"filter":"severity=critical"}`, nil)
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+	if receivedFilter != "severity=critical" {
+		t.Errorf("expected filter=severity=critical, got %q", receivedFilter)
+	}
+}
+
+func TestToolExecutor_ListAlerts_NoAlertmanager(t *testing.T) {
+	t.Parallel()
+
+	grafanaMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+			{"name": "Prometheus", "type": "prometheus", "uid": "prom-uid"},
+		})
+	}))
+	defer grafanaMock.Close()
+
+	te := NewToolExecutor(grafanaMock.URL, log.DefaultLogger)
+	_, err := te.Execute(context.Background(), "list_alerts", `{}`, nil)
+	if err == nil {
+		t.Fatal("expected error when no alertmanager found")
+	}
+}

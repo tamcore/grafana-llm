@@ -113,6 +113,27 @@ func llmTools() []openai.Tool {
 				}`),
 			},
 		},
+		{
+			Type: openai.ToolTypeFunction,
+			Function: &openai.FunctionDefinition{
+				Name:        "list_alerts",
+				Description: "List currently firing or pending alerts from the Alertmanager datasource. Use this to check for active incidents, understand alert states, and correlate alerts with metrics/logs.",
+				Parameters: json.RawMessage(`{
+					"type": "object",
+					"properties": {
+						"filter": {
+							"type": "string",
+							"description": "Optional Alertmanager filter expression, e.g. severity=critical or namespace=default"
+						},
+						"state": {
+							"type": "string",
+							"description": "Filter by alert state: 'firing', 'pending', or 'inactive'. Leave empty for all."
+						}
+					},
+					"required": []
+				}`),
+			},
+		},
 	}
 }
 
@@ -139,4 +160,10 @@ type ListDashboardsArgs struct {
 // GetDashboardArgs holds parsed arguments for get_dashboard.
 type GetDashboardArgs struct {
 	UID string `json:"uid"`
+}
+
+// ListAlertsArgs holds parsed arguments for list_alerts.
+type ListAlertsArgs struct {
+	Filter string `json:"filter,omitempty"`
+	State  string `json:"state,omitempty"`
 }

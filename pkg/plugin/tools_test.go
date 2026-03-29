@@ -9,8 +9,8 @@ func TestLLMTools_ReturnsExpectedTools(t *testing.T) {
 	t.Parallel()
 
 	tools := llmTools()
-	if len(tools) != 5 {
-		t.Fatalf("expected 5 tools, got %d", len(tools))
+	if len(tools) != 6 {
+		t.Fatalf("expected 6 tools, got %d", len(tools))
 	}
 
 	expected := map[string]bool{
@@ -19,6 +19,7 @@ func TestLLMTools_ReturnsExpectedTools(t *testing.T) {
 		"list_datasources": false,
 		"list_dashboards":  false,
 		"get_dashboard":    false,
+		"list_alerts":      false,
 	}
 
 	for _, tool := range tools {
@@ -154,5 +155,39 @@ func TestGetDashboardArgs_Unmarshal(t *testing.T) {
 
 	if args.UID != "abc-123" {
 		t.Errorf("uid = %q", args.UID)
+	}
+}
+
+func TestListAlertsArgs_Unmarshal(t *testing.T) {
+	t.Parallel()
+
+	input := `{"filter":"severity=critical","state":"firing"}`
+	var args ListAlertsArgs
+	if err := json.Unmarshal([]byte(input), &args); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	if args.Filter != "severity=critical" {
+		t.Errorf("filter = %q", args.Filter)
+	}
+	if args.State != "firing" {
+		t.Errorf("state = %q", args.State)
+	}
+}
+
+func TestListAlertsArgs_Unmarshal_Empty(t *testing.T) {
+	t.Parallel()
+
+	input := `{}`
+	var args ListAlertsArgs
+	if err := json.Unmarshal([]byte(input), &args); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	if args.Filter != "" {
+		t.Errorf("expected empty filter, got %q", args.Filter)
+	}
+	if args.State != "" {
+		t.Errorf("expected empty state, got %q", args.State)
 	}
 }

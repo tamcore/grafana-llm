@@ -45,6 +45,8 @@ func (te *ToolExecutor) Execute(ctx context.Context, name string, arguments stri
 		return te.listDashboards(ctx, arguments, headers)
 	case "get_dashboard":
 		return te.getDashboard(ctx, arguments, headers)
+	case "list_alerts":
+		return te.listAlerts(ctx, arguments, headers)
 	default:
 		return "", fmt.Errorf("unknown tool: %s", name)
 	}
@@ -330,6 +332,58 @@ func (te *ToolExecutor) getDashboard(ctx context.Context, arguments string, head
 
 	out, _ := json.Marshal(summary)
 	return truncateString(string(out), 50000), nil
+}
+
+func (te *ToolExecutor) listAlerts(ctx context.Context, arguments string, headers map[string]string) (string, error) {
+	var args ListAlertsArgs
+	if arguments != "" && arguments != "{}" {
+		if err := json.Unmarshal([]byte(arguments), &args); err != nil {
+			return "", fmt.Errorf("parse list_alerts args: %w", err)
+		}
+	}
+
+	dsUID, err := te.findDatasource(ctx, headers, "alertmanager")
+	if err != nil {
+		return "", fmt.Errorf("find alertmanager datasource: %w", err)
+	}
+
+	params := url.Values{}
+	if args.Filter != "" {
+		params.Set("filter", args.Filter)
+	}
+
+	apiPath := fmt.Sprintf("/api/datasources/proxy/uid/%s/alertmanager/api/v2/alerts", dsUID)
+	if len(params) > 0 {
+		apiPath += "?" + params.Encode()
+	}
+
+	body, err := te.doGrafanaRequest(ctx, http.MethodGet, apiPath, nil, headers)
+	if err != nil {
+		return "", err
+	}
+
+	// If state filter requested, do client-side filtering
+	if args.State != "" {
+		var alerts []map[string]interface{}
+		if err := json.Unmarshal([]byte(body), &alerts); err != nil {
+			return body, nil //nolint:nilerr // Return raw body if parsing fails
+		}
+		var filtered []map[string]interface{}
+		for _, alert := range alerts {
+			if state, ok := alert["state"].(string); ok && state == args.State {
+				filtered = append(filtered, alert)
+			}
+			if status, ok := alert["status"].(map[string]interface{}); ok {
+				if state, ok := status["state"].(string); ok && state == args.State {
+					filtered = append(filtered, alert)
+				}
+			}
+		}
+		out, _ := json.Marshal(filtered)
+		return truncateString(string(out), 50000), nil
+	}
+
+	return truncateString(body, 50000), nil
 }
 
 func (te *ToolExecutor) findDatasource(ctx context.Context, headers map[string]string, dsType string) (string, error) {

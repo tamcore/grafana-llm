@@ -2,7 +2,10 @@ module github.com/tamcore/grafana-llm
 
 go 1.26.1
 
-require github.com/grafana/grafana-plugin-sdk-go v0.290.1
+require (
+	github.com/grafana/grafana-plugin-sdk-go v0.290.1
+	github.com/sashabaranov/go-openai v1.41.2
+)
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect

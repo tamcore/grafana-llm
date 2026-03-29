@@ -1,0 +1,208 @@
+package plugin
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
+)
+
+func TestResourceHealth_Success(t *testing.T) {
+	t.Parallel()
+
+	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"test-model"}]}`))
+	}))
+	defer llmServer.Close()
+
+	app := newTestApp(t, llmServer.URL+"/v1", "key")
+
+	req := &backend.CallResourceRequest{
+		Path:   "health",
+		Method: http.MethodGet,
+	}
+
+	var statusCode int
+	var body []byte
+
+	sender := backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		statusCode = res.Status
+		body = res.Body
+		return nil
+	})
+
+	err := app.CallResource(context.Background(), req, sender)
+	if err != nil {
+		t.Fatalf("CallResource returned error: %v", err)
+	}
+
+	if statusCode != http.StatusOK {
+		t.Errorf("status = %d, want %d", statusCode, http.StatusOK)
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+
+	if resp["status"] != "ok" {
+		t.Errorf("status = %q, want %q", resp["status"], "ok")
+	}
+}
+
+func TestResourceChat_MissingPrompt(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t, "http://localhost:1/v1", "key")
+
+	req := &backend.CallResourceRequest{
+		Path:   "chat",
+		Method: http.MethodPost,
+		Body:   []byte(`{"mode":"explain_panel","context":{}}`),
+	}
+
+	var statusCode int
+
+	sender := backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		statusCode = res.Status
+		return nil
+	})
+
+	err := app.CallResource(context.Background(), req, sender)
+	if err != nil {
+		t.Fatalf("CallResource returned error: %v", err)
+	}
+
+	if statusCode != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", statusCode, http.StatusBadRequest)
+	}
+}
+
+func TestResourceChat_InvalidMode(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t, "http://localhost:1/v1", "key")
+
+	req := &backend.CallResourceRequest{
+		Path:   "chat",
+		Method: http.MethodPost,
+		Body:   []byte(`{"mode":"invalid_mode","prompt":"test","context":{}}`),
+	}
+
+	var statusCode int
+
+	sender := backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		statusCode = res.Status
+		return nil
+	})
+
+	err := app.CallResource(context.Background(), req, sender)
+	if err != nil {
+		t.Fatalf("CallResource returned error: %v", err)
+	}
+
+	if statusCode != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", statusCode, http.StatusBadRequest)
+	}
+}
+
+func TestResourceChat_Success(t *testing.T) {
+	t.Parallel()
+
+	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/chat/completions" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		bodyBytes, _ := io.ReadAll(r.Body)
+		var reqBody map[string]interface{}
+		_ = json.Unmarshal(bodyBytes, &reqBody)
+
+		if reqBody["model"] != "test-model" {
+			t.Errorf("model = %v, want test-model", reqBody["model"])
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"choices": [{"message": {"content": "This panel shows test data."}}],
+			"usage": {"prompt_tokens": 10, "completion_tokens": 5}
+		}`))
+	}))
+	defer llmServer.Close()
+
+	app := newTestApp(t, llmServer.URL+"/v1", "key")
+
+	chatReq := `{
+		"mode": "explain_panel",
+		"prompt": "What does this show?",
+		"context": {"panel": {"title": "Test"}}
+	}`
+
+	req := &backend.CallResourceRequest{
+		Path:   "chat",
+		Method: http.MethodPost,
+		Body:   []byte(chatReq),
+	}
+
+	var statusCode int
+	var body []byte
+
+	sender := backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		statusCode = res.Status
+		body = res.Body
+		return nil
+	})
+
+	err := app.CallResource(context.Background(), req, sender)
+	if err != nil {
+		t.Fatalf("CallResource returned error: %v", err)
+	}
+
+	if statusCode != http.StatusOK {
+		t.Errorf("status = %d, want %d; body: %s", statusCode, http.StatusOK, string(body))
+	}
+
+	var resp ChatResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+
+	if !strings.Contains(resp.Content, "test data") {
+		t.Errorf("content = %q, expected to contain 'test data'", resp.Content)
+	}
+}
+
+func TestResourceUnknownPath(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t, "http://localhost:1/v1", "key")
+
+	req := &backend.CallResourceRequest{
+		Path:   "unknown",
+		Method: http.MethodGet,
+	}
+
+	var statusCode int
+
+	sender := backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		statusCode = res.Status
+		return nil
+	})
+
+	err := app.CallResource(context.Background(), req, sender)
+	if err != nil {
+		t.Fatalf("CallResource returned error: %v", err)
+	}
+
+	if statusCode != http.StatusNotFound {
+		t.Errorf("status = %d, want %d", statusCode, http.StatusNotFound)
+	}
+}

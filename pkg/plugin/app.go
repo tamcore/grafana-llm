@@ -58,6 +58,8 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 		logger:   logger,
 	}
 
+	app.registerRoutes()
+
 	return app, nil
 }
 

@@ -1,8 +1,9 @@
 version: "2"
 run:
   go: "1.22"
-  exclude-dirs:
-    - node_modules
-    - dist
 linters:
   default: standard
+  exclusions:
+    paths:
+      - node_modules
+      - dist

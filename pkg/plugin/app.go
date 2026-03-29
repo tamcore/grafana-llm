@@ -12,21 +12,21 @@ import (
 )
 
 const (
-	defaultTimeoutSeconds = 60
-	defaultMaxTokens      = 4096
+	defaultTimeoutSeconds   = 60
+	defaultMaxTokens        = 4096
+	defaultMaxContextTokens = 120000
 )
 
 // Settings holds the plugin configuration parsed from Grafana's jsonData and secureJsonData.
 type Settings struct {
-	EndpointURL             string            `json:"endpointURL"`
-	Model                   string            `json:"model"`
-	TimeoutSeconds          int               `json:"timeoutSeconds"`
-	MaxTokens               int               `json:"maxTokens"`
-	CustomHeaders           map[string]string `json:"customHeaders,omitempty"`
-	GrafanaURL              string            `json:"grafanaURL,omitempty"`
-	GrafanaServiceAcctToken string            `json:"grafanaServiceAccountToken,omitempty"`
-	APIKey                  string            `json:"-"`
-	GrafanaToken            string            `json:"-"`
+	EndpointURL      string            `json:"endpointURL"`
+	Model            string            `json:"model"`
+	TimeoutSeconds   int               `json:"timeoutSeconds"`
+	MaxTokens        int               `json:"maxTokens"`
+	MaxContextTokens int               `json:"maxContextTokens"`
+	CustomHeaders    map[string]string `json:"customHeaders,omitempty"`
+	GrafanaURL       string            `json:"grafanaURL,omitempty"`
+	APIKey           string            `json:"-"`
 }
 
 // App is the main plugin instance.
@@ -56,16 +56,12 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 		settings.MaxTokens = defaultMaxTokens
 	}
 
-	if apiKey, ok := appSettings.DecryptedSecureJSONData["apiKey"]; ok {
-		settings.APIKey = apiKey
+	if settings.MaxContextTokens <= 0 {
+		settings.MaxContextTokens = defaultMaxContextTokens
 	}
 
-	if grafanaToken, ok := appSettings.DecryptedSecureJSONData["grafanaToken"]; ok {
-		settings.GrafanaToken = grafanaToken
-	}
-	// Also support token from jsonData for convenience
-	if settings.GrafanaToken == "" && settings.GrafanaServiceAcctToken != "" {
-		settings.GrafanaToken = settings.GrafanaServiceAcctToken
+	if apiKey, ok := appSettings.DecryptedSecureJSONData["apiKey"]; ok {
+		settings.APIKey = apiKey
 	}
 
 	grafanaURL := settings.GrafanaURL
@@ -74,14 +70,6 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 	}
 
 	te := NewToolExecutor(grafanaURL, logger)
-	if settings.GrafanaToken != "" {
-		te.defaultHeaders = map[string]string{
-			"Authorization": "Bearer " + settings.GrafanaToken,
-		}
-		logger.Info("Tool executor configured with service account token")
-	} else {
-		logger.Warn("No Grafana service account token configured; tool calls will rely on forwarded request headers")
-	}
 
 	app := &App{
 		settings:     settings,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
@@ -146,14 +147,28 @@ func (a *App) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	start := time.Now()
 	content, usage, err := a.chatCompletion(r.Context(), req)
+	duration := time.Since(start).Seconds()
+
 	if err != nil {
-		a.logger.Error("chat completion failed", "error", err)
+		a.logger.Error("chat completion failed", "error", err, "mode", req.Mode, "duration_s", duration)
+		a.metrics.recordRequest(a.settings.Model, "error", duration, 0, 0)
 		writeJSON(w, http.StatusBadGateway, map[string]string{
 			"error": "LLM request failed: " + err.Error(),
 		})
 		return
 	}
+
+	promptTokens, completionTokens := 0, 0
+	if usage != nil {
+		promptTokens = usage.PromptTokens
+		completionTokens = usage.CompletionTokens
+	}
+
+	a.logger.Info("chat completion succeeded", "mode", req.Mode, "model", a.settings.Model,
+		"duration_s", duration, "prompt_tokens", promptTokens, "completion_tokens", completionTokens)
+	a.metrics.recordRequest(a.settings.Model, "success", duration, promptTokens, completionTokens)
 
 	writeJSON(w, http.StatusOK, ChatResponse{
 		Content: content,

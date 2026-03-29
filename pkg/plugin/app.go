@@ -8,6 +8,7 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -30,6 +31,7 @@ type App struct {
 	httpHandler backend.CallResourceHandler
 	settings    Settings
 	logger      log.Logger
+	metrics     *metrics
 }
 
 // NewApp creates a new plugin instance from the given settings.
@@ -56,6 +58,7 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 	app := &App{
 		settings: settings,
 		logger:   logger,
+		metrics:  newMetrics(prometheus.NewRegistry()),
 	}
 
 	app.registerRoutes()

@@ -13,7 +13,7 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-const maxToolRounds = 10
+const maxToolRounds = 25
 
 // streamChatCompletion sends a streaming chat completion request with tool-calling
 // support and relays chunks via the sender.

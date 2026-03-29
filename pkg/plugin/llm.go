@@ -51,6 +51,22 @@ func buildSystemPrompt(mode string, contextData json.RawMessage) string {
 	}
 
 	switch mode {
+	case "chat":
+		base := `You are a Grafana operations assistant with direct access to Prometheus, Loki, and Grafana dashboards via tool calls. You can query metrics, search logs, list datasources, list dashboards, and inspect dashboard definitions.
+
+When a user asks about the state of their infrastructure:
+1. Use list_datasources to discover available data sources
+2. Use list_dashboards to find relevant dashboards
+3. Use get_dashboard to inspect dashboard panels and their queries
+4. Use query_prometheus / query_loki to fetch actual live data
+5. Correlate findings across metrics and logs to identify root causes
+
+Be proactive: if the user asks a vague question like "any problems?", query relevant metrics (CPU, memory, disk, error rates, pod restarts) and logs without asking for clarification. Always back up your analysis with real data.`
+		if contextStr != "" {
+			return base + "\n\nUser-provided context:\n" + contextStr
+		}
+		return base
+
 	case "explain_panel":
 		return fmt.Sprintf(`You are a Grafana panel analysis assistant. Explain what the following panel shows, highlight notable patterns, and flag potential concerns.
 

@@ -67,6 +67,39 @@ func TestBuildSystemPrompt_UnknownMode(t *testing.T) {
 	}
 }
 
+func TestBuildSystemPrompt_Chat(t *testing.T) {
+	t.Parallel()
+
+	prompt := buildSystemPrompt("chat", nil)
+
+	if !contains(prompt, "operations assistant") {
+		t.Error("expected chat prompt to mention 'operations assistant'")
+	}
+	if !contains(prompt, "list_datasources") {
+		t.Error("expected chat prompt to mention 'list_datasources'")
+	}
+	if !contains(prompt, "list_dashboards") {
+		t.Error("expected chat prompt to mention 'list_dashboards'")
+	}
+	if !contains(prompt, "query_prometheus") {
+		t.Error("expected chat prompt to mention 'query_prometheus'")
+	}
+}
+
+func TestBuildSystemPrompt_ChatWithContext(t *testing.T) {
+	t.Parallel()
+
+	ctx := json.RawMessage(`{"autoDiscovery":true,"datasources":[{"name":"Prometheus","type":"prometheus","uid":"prom-1"}]}`)
+	prompt := buildSystemPrompt("chat", ctx)
+
+	if !contains(prompt, "operations assistant") {
+		t.Error("expected chat prompt base text")
+	}
+	if !contains(prompt, "Prometheus") {
+		t.Error("expected prompt to include context with datasource info")
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 && (s != "" && substr != "" && containsLower(s, substr))
 }

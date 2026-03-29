@@ -1,0 +1,21 @@
+{
+  "uid": "k8s-cluster-overview",
+  "title": "Kubernetes Cluster Overview",
+  "tags": ["kubernetes", "cluster"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {"id":1,"type":"stat","title":"Total Nodes","gridPos":{"h":4,"w":4,"x":0,"y":0},"targets":[{"expr":"count(kube_node_info)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null}]}}}},
+    {"id":2,"type":"stat","title":"Running Pods","gridPos":{"h":4,"w":4,"x":4,"y":0},"targets":[{"expr":"count(kube_pod_status_phase{phase=\"Running\"})","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null}]}}}},
+    {"id":3,"type":"stat","title":"Namespaces","gridPos":{"h":4,"w":4,"x":8,"y":0},"targets":[{"expr":"count(kube_namespace_created)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"blue","value":null}]}}}},
+    {"id":4,"type":"stat","title":"Deployments","gridPos":{"h":4,"w":4,"x":12,"y":0},"targets":[{"expr":"count(kube_deployment_created)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"purple","value":null}]}}}},
+    {"id":5,"type":"stat","title":"Failed Pods","gridPos":{"h":4,"w":4,"x":16,"y":0},"targets":[{"expr":"count(kube_pod_status_phase{phase=\"Failed\"}) or vector(0)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null},{"color":"red","value":1}]}}}},
+    {"id":6,"type":"stat","title":"Services","gridPos":{"h":4,"w":4,"x":20,"y":0},"targets":[{"expr":"count(kube_service_info)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"orange","value":null}]}}}},
+    {"id":7,"type":"timeseries","title":"Cluster CPU Usage","gridPos":{"h":8,"w":12,"x":0,"y":4},"targets":[{"expr":"sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[5m])) / sum(rate(node_cpu_seconds_total[5m])) * 100","legendFormat":"CPU Usage %","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent","min":0,"max":100,"custom":{"fillOpacity":20,"gradientMode":"scheme"},"color":{"mode":"continuous-GrYlRd"}}}},
+    {"id":8,"type":"timeseries","title":"Cluster Memory Usage","gridPos":{"h":8,"w":12,"x":12,"y":4},"targets":[{"expr":"(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100","legendFormat":"Memory Usage %","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent","min":0,"max":100,"custom":{"fillOpacity":20,"gradientMode":"scheme"},"color":{"mode":"continuous-GrYlRd"}}}},
+    {"id":9,"type":"timeseries","title":"Pod Count by Namespace (Top 10)","gridPos":{"h":8,"w":12,"x":0,"y":12},"targets":[{"expr":"topk(10, count by (namespace) (kube_pod_info))","legendFormat":"{{ namespace }}","refId":"A"}],"fieldConfig":{"defaults":{"custom":{"fillOpacity":10}}}},
+    {"id":10,"type":"timeseries","title":"Network I/O","gridPos":{"h":8,"w":12,"x":12,"y":12},"targets":[{"expr":"sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*|docker.*|flannel.*|cali.*|cbr.*\"}[5m]))","legendFormat":"Received","refId":"A"},{"expr":"sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|docker.*|flannel.*|cali.*|cbr.*\"}[5m]))","legendFormat":"Transmitted","refId":"B"}],"fieldConfig":{"defaults":{"unit":"Bps","custom":{"fillOpacity":10}}}},
+    {"id":12,"type":"bargauge","title":"Node CPU Usage","gridPos":{"h":8,"w":24,"x":0,"y":20},"targets":[{"expr":"100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)","legendFormat":"{{ instance }}","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent","min":0,"max":100,"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":60},{"color":"red","value":80}]}}},"options":{"orientation":"horizontal","displayMode":"gradient"}}
+  ]
+}

@@ -1,9 +1,14 @@
-import { AppPlugin, PluginExtensionPanelContext, PluginExtensionPoints } from '@grafana/data';
+import { AppPlugin, PluginExtensionPanelContext } from '@grafana/data';
 import React from 'react';
 import { AppConfig } from './components/AppConfig';
 import { AnalyzePage } from './pages';
 import { PanelAnalysisModal, ExploreAnalysisModal } from './extensions/AnalysisModal';
 import { PLUGIN_ID } from './constants';
+
+// Hardcode extension point IDs to avoid runtime enum resolution issues
+const PANEL_MENU_TARGET = 'grafana/dashboard/panel/menu';
+const EXPLORE_TOOLBAR_TARGET = 'grafana/explore/toolbar/action';
+const COMMAND_PALETTE_TARGET = 'grafana/commandpalette/action';
 
 export const plugin = new AppPlugin<{}>()
   .setRootPage(AnalyzePage)
@@ -16,7 +21,7 @@ export const plugin = new AppPlugin<{}>()
   .addLink<PluginExtensionPanelContext>({
     title: 'Analyze with LLM',
     description: 'Send this panel to AI for analysis',
-    targets: [PluginExtensionPoints.DashboardPanelMenu],
+    targets: [PANEL_MENU_TARGET],
     category: 'Extensions',
     onClick: (event, helpers) => {
       const panelContext = helpers?.context;
@@ -34,7 +39,7 @@ export const plugin = new AppPlugin<{}>()
   .addLink({
     title: 'Analyze with LLM',
     description: 'Analyze current query results with AI',
-    targets: [PluginExtensionPoints.ExploreToolbarAction],
+    targets: [EXPLORE_TOOLBAR_TARGET],
     onClick: (_event, helpers) => {
       if (helpers?.openModal) {
         helpers.openModal({
@@ -49,6 +54,6 @@ export const plugin = new AppPlugin<{}>()
   .addLink({
     title: 'LLM Analysis',
     description: 'Open LLM Analysis page',
-    targets: [PluginExtensionPoints.CommandPalette],
+    targets: [COMMAND_PALETTE_TARGET],
     path: `/a/${PLUGIN_ID}`,
   });

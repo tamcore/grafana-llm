@@ -1,0 +1,31 @@
+{
+  "uid": "node-metrics",
+  "title": "Node Metrics Deep Dive",
+  "tags": ["kubernetes", "nodes"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "templating": {
+    "list": [{
+      "name": "instance",
+      "type": "query",
+      "query": "label_values(node_cpu_seconds_total, instance)",
+      "datasource": { "type": "prometheus" },
+      "refresh": 2,
+      "includeAll": true,
+      "allValue": ".*",
+      "multi": false,
+      "current": { "text": "All", "value": "$__all" }
+    }]
+  },
+  "panels": [
+    {"id":1,"type":"gauge","title":"CPU Usage","gridPos":{"h":6,"w":6,"x":0,"y":0},"targets":[{"expr":"100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[5m])) * 100)","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent","min":0,"max":100,"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":60},{"color":"red","value":80}]}}}},
+    {"id":2,"type":"gauge","title":"Memory Usage","gridPos":{"h":6,"w":6,"x":6,"y":0},"targets":[{"expr":"100 - (avg(node_memory_MemAvailable_bytes{instance=~\"$instance\"}) / avg(node_memory_MemTotal_bytes{instance=~\"$instance\"}) * 100)","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent","min":0,"max":100,"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":70},{"color":"red","value":85}]}}}},
+    {"id":3,"type":"gauge","title":"Disk Usage (/)","gridPos":{"h":6,"w":6,"x":12,"y":0},"targets":[{"expr":"100 - (avg(node_filesystem_avail_bytes{mountpoint=\"/\", instance=~\"$instance\"}) / avg(node_filesystem_size_bytes{mountpoint=\"/\", instance=~\"$instance\"}) * 100)","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent","min":0,"max":100,"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":70},{"color":"red","value":85}]}}}},
+    {"id":4,"type":"stat","title":"Uptime","gridPos":{"h":6,"w":6,"x":18,"y":0},"targets":[{"expr":"avg(time() - node_boot_time_seconds{instance=~\"$instance\"})","refId":"A"}],"fieldConfig":{"defaults":{"unit":"s","thresholds":{"steps":[{"color":"green","value":null}]}}}},
+    {"id":5,"type":"timeseries","title":"CPU by Mode","gridPos":{"h":8,"w":12,"x":0,"y":6},"targets":[{"expr":"avg by (mode) (rate(node_cpu_seconds_total{instance=~\"$instance\", mode!=\"idle\"}[5m])) * 100","legendFormat":"{{ mode }}","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent","custom":{"fillOpacity":30,"stacking":{"mode":"normal"}}}}},
+    {"id":6,"type":"timeseries","title":"Memory Breakdown","gridPos":{"h":8,"w":12,"x":12,"y":6},"targets":[{"expr":"avg(node_memory_MemTotal_bytes{instance=~\"$instance\"})","legendFormat":"Total","refId":"A"},{"expr":"avg(node_memory_MemTotal_bytes{instance=~\"$instance\"} - node_memory_MemAvailable_bytes{instance=~\"$instance\"})","legendFormat":"Used","refId":"B"},{"expr":"avg(node_memory_Cached_bytes{instance=~\"$instance\"})","legendFormat":"Cached","refId":"C"}],"fieldConfig":{"defaults":{"unit":"bytes","custom":{"fillOpacity":10}}}},
+    {"id":7,"type":"timeseries","title":"Network Traffic","gridPos":{"h":8,"w":12,"x":0,"y":14},"targets":[{"expr":"sum(rate(node_network_receive_bytes_total{instance=~\"$instance\", device!~\"lo|veth.*|cali.*\"}[5m]))","legendFormat":"Received","refId":"A"},{"expr":"-sum(rate(node_network_transmit_bytes_total{instance=~\"$instance\", device!~\"lo|veth.*|cali.*\"}[5m]))","legendFormat":"Transmitted","refId":"B"}],"fieldConfig":{"defaults":{"unit":"Bps","custom":{"fillOpacity":10}}}},
+    {"id":8,"type":"timeseries","title":"Load Average","gridPos":{"h":8,"w":12,"x":12,"y":14},"targets":[{"expr":"avg(node_load1{instance=~\"$instance\"})","legendFormat":"1m","refId":"A"},{"expr":"avg(node_load5{instance=~\"$instance\"})","legendFormat":"5m","refId":"B"},{"expr":"avg(node_load15{instance=~\"$instance\"})","legendFormat":"15m","refId":"C"}],"fieldConfig":{"defaults":{"custom":{"fillOpacity":5}}}}
+  ]
+}

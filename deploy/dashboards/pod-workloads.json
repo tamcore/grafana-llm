@@ -1,0 +1,33 @@
+{
+  "uid": "pod-workloads",
+  "title": "Pod & Workload Metrics",
+  "tags": ["kubernetes", "pods", "workloads"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "templating": {
+    "list": [{
+      "name": "namespace",
+      "type": "query",
+      "query": "label_values(kube_pod_info, namespace)",
+      "datasource": { "type": "prometheus" },
+      "refresh": 2,
+      "includeAll": true,
+      "allValue": ".*",
+      "multi": false,
+      "current": { "text": "All", "value": "$__all" }
+    }]
+  },
+  "panels": [
+    {"id":1,"type":"stat","title":"Running Pods","gridPos":{"h":4,"w":4,"x":0,"y":0},"targets":[{"expr":"count(kube_pod_status_phase{phase=\"Running\", namespace=~\"$namespace\"})","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null}]}}}},
+    {"id":2,"type":"stat","title":"Pending Pods","gridPos":{"h":4,"w":4,"x":4,"y":0},"targets":[{"expr":"count(kube_pod_status_phase{phase=\"Pending\", namespace=~\"$namespace\"}) or vector(0)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":1}]}}}},
+    {"id":3,"type":"stat","title":"Restarts (1h)","gridPos":{"h":4,"w":4,"x":8,"y":0},"targets":[{"expr":"sum(increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[1h])) or vector(0)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":5},{"color":"red","value":20}]}}}},
+    {"id":4,"type":"stat","title":"OOMKilled","gridPos":{"h":4,"w":4,"x":12,"y":0},"targets":[{"expr":"count(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\", namespace=~\"$namespace\"}) or vector(0)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null},{"color":"red","value":1}]}}}},
+    {"id":5,"type":"stat","title":"CrashLoop","gridPos":{"h":4,"w":4,"x":16,"y":0},"targets":[{"expr":"count(kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\", namespace=~\"$namespace\"}) or vector(0)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null},{"color":"red","value":1}]}}}},
+    {"id":6,"type":"stat","title":"Not Ready","gridPos":{"h":4,"w":4,"x":20,"y":0},"targets":[{"expr":"count(kube_deployment_status_replicas_unavailable{namespace=~\"$namespace\"} > 0) or vector(0)","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null},{"color":"red","value":1}]}}}},
+    {"id":7,"type":"timeseries","title":"CPU Requests vs Allocatable","gridPos":{"h":8,"w":12,"x":0,"y":4},"targets":[{"expr":"sum(kube_pod_container_resource_requests{resource=\"cpu\", namespace=~\"$namespace\"})","legendFormat":"Requested","refId":"A"},{"expr":"sum(kube_node_status_allocatable{resource=\"cpu\"})","legendFormat":"Allocatable","refId":"B"}],"fieldConfig":{"defaults":{"unit":"short","custom":{"fillOpacity":10}}}},
+    {"id":8,"type":"timeseries","title":"Memory Requests vs Allocatable","gridPos":{"h":8,"w":12,"x":12,"y":4},"targets":[{"expr":"sum(kube_pod_container_resource_requests{resource=\"memory\", namespace=~\"$namespace\"})","legendFormat":"Requested","refId":"A"},{"expr":"sum(kube_node_status_allocatable{resource=\"memory\"})","legendFormat":"Allocatable","refId":"B"}],"fieldConfig":{"defaults":{"unit":"bytes","custom":{"fillOpacity":10}}}},
+    {"id":9,"type":"timeseries","title":"Pod Restarts by Namespace","gridPos":{"h":8,"w":12,"x":0,"y":12},"targets":[{"expr":"sum by (namespace) (increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[1h]))","legendFormat":"{{ namespace }}","refId":"A"}],"fieldConfig":{"defaults":{"custom":{"fillOpacity":10}}}},
+    {"id":10,"type":"bargauge","title":"Pods per Namespace","gridPos":{"h":8,"w":12,"x":12,"y":12},"targets":[{"expr":"count by (namespace) (kube_pod_info{namespace=~\"$namespace\"})","legendFormat":"{{ namespace }}","refId":"A"}],"fieldConfig":{"defaults":{"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":20},{"color":"red","value":50}]}}},"options":{"orientation":"horizontal","displayMode":"gradient"}}
+  ]
+}

@@ -1,7 +1,7 @@
 import { css } from '@emotion/css';
-import { useStyles2 } from '@grafana/ui';
+import { useStyles2, IconButton } from '@grafana/ui';
 import { GrafanaTheme2 } from '@grafana/data';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -40,22 +40,53 @@ const toolNameLabels: Record<string, string> = {
   list_datasources: '🔍 Listing datasources',
   list_dashboards: '📋 Listing dashboards',
   get_dashboard: '📊 Inspecting dashboard',
+  list_alerts: '🚨 Checking alerts',
 };
+
+function extractToolDetail(name: string, args: string): string {
+  try {
+    const parsed = JSON.parse(args);
+    if (name === 'query_prometheus' || name === 'query_loki') {
+      return parsed.query || '';
+    }
+    if (name === 'get_dashboard') {
+      return parsed.uid || '';
+    }
+    if (name === 'list_dashboards') {
+      return parsed.query || '';
+    }
+    if (name === 'list_alerts') {
+      const parts = [];
+      if (parsed.state) {parts.push(`state=${parsed.state}`);}
+      if (parsed.filter) {parts.push(parsed.filter);}
+      return parts.join(' ');
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
 
 function ToolCallBadge({ name, arguments: args }: ToolCallStatus) {
   const styles = useStyles2(getStyles);
   const label = toolNameLabels[name] || `🔧 ${name}`;
-  let detail = '';
-  try {
-    const parsed = JSON.parse(args);
-    detail = parsed.query || '';
-  } catch {
-    // ignore
-  }
+  const detail = extractToolDetail(name, args);
+
+  const handleCopy = useCallback(() => {
+    if (detail) {
+      navigator.clipboard.writeText(detail);
+    }
+  }, [detail]);
+
   return (
     <div data-testid="tool-call" className={styles.toolCall}>
       <span className={styles.toolCallLabel}>{label}</span>
-      {detail && <code className={styles.toolCallQuery}>{detail}</code>}
+      {detail && (
+        <>
+          <code className={styles.toolCallQuery}>{detail}</code>
+          <IconButton name="copy" size="sm" tooltip="Copy query" onClick={handleCopy} aria-label="Copy query" />
+        </>
+      )}
     </div>
   );
 }

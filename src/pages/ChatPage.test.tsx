@@ -121,4 +121,11 @@ describe('ChatPage', () => {
     expect(screen.queryByText('Datasources')).not.toBeInTheDocument();
     expect(screen.queryByText('Dashboards')).not.toBeInTheDocument();
   });
+
+  it('shows quick action buttons when no messages', () => {
+    render(<ChatPage />);
+    expect(screen.getByText('Find Anomalies')).toBeInTheDocument();
+    expect(screen.getByText('Cluster Health')).toBeInTheDocument();
+    expect(screen.getByText('Alert Investigation')).toBeInTheDocument();
+  });
 });

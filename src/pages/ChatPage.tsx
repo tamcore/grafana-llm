@@ -420,6 +420,35 @@ export function ChatPage() {
 
         <ChatView messages={messages} isStreaming={isStreaming} streamContent={streamContent} activeToolCalls={activeToolCalls} />
 
+        {!isStreaming && messages.length === 0 && (
+          <div className={styles.quickActions}>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="bolt"
+              onClick={() => setPrompt('What looks unusual or concerning right now? Check metrics, alerts, and logs for any anomalies or problems.')}
+            >
+              Find Anomalies
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="heart"
+              onClick={() => setPrompt('Give me a health check of the cluster: CPU, memory, disk usage, pod status, and any firing alerts.')}
+            >
+              Cluster Health
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="fire"
+              onClick={() => setPrompt('List all firing alerts and for each one, investigate the root cause by correlating metrics and logs.')}
+            >
+              Alert Investigation
+            </Button>
+          </div>
+        )}
+
         {maxTokens > 0 && (
           <div className={styles.tokenBar}>
             <span className={styles.tokenLabel}>
@@ -582,6 +611,12 @@ function getStyles(theme: GrafanaTheme2) {
       padding: theme.spacing(2),
       background: theme.colors.background.secondary,
       borderRadius: theme.shape.radius.default,
+    }),
+    quickActions: css({
+      display: 'flex',
+      gap: theme.spacing(1),
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(1),
     }),
     tokenBar: css({
       display: 'flex',

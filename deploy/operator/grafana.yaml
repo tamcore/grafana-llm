@@ -29,7 +29,7 @@ spec:
                 - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
                   value: tamcore-llmanalysis-app
                 - name: GF_INSTALL_PLUGINS
-                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
               volumeMounts:
                 - name: llm-plugin-config
                   mountPath: /etc/grafana/provisioning/plugins

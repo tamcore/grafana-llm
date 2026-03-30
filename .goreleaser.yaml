@@ -1,6 +1,6 @@
 version: 2
 
-project_name: tamcore-llmanalysis-app
+project_name: llmanalysis-app
 
 builds:
   - main: ./pkg

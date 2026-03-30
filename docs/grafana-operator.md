@@ -82,7 +82,7 @@ spec:
                 - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
                   value: tamcore-llmanalysis-app
                 - name: GF_INSTALL_PLUGINS
-                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
 ```
 
 The `GF_INSTALL_PLUGINS` format is `<url>;<plugin-id>`. The `/releases/latest/download/`
@@ -92,7 +92,7 @@ To pin a specific version:
 
 ```yaml
                 - name: GF_INSTALL_PLUGINS
-                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/v0.1.0/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/v0.1.0/llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
 ```
 
 **Option B — Init container**
@@ -113,7 +113,7 @@ deployment:
               - |
                 TAG=$(curl -sI https://github.com/tamcore/grafana-llmanalysis-app/releases/latest | grep -i '^location:' | sed 's|.*/||;s/\r$//')
                 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-                curl -sL "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/${TAG}/tamcore-llmanalysis-app-linux-${ARCH}.tar.gz" \
+                curl -sL "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/${TAG}/llmanalysis-app-linux-${ARCH}.tar.gz" \
                   | tar xz -C /plugins/
             volumeMounts:
               - name: llm-plugin
@@ -530,7 +530,7 @@ spec:
                 - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
                   value: tamcore-llmanalysis-app
                 - name: GF_INSTALL_PLUGINS
-                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
               volumeMounts:
                 - name: llm-plugin-provisioning
                   mountPath: /etc/grafana/provisioning/plugins

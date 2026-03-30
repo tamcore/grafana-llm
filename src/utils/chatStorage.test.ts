@@ -48,11 +48,9 @@ describe('generateSessionId', () => {
     expect(a).not.toEqual(b);
   });
 
-  it('contains a timestamp prefix', () => {
-    const before = Date.now();
+  it('returns a valid UUID', () => {
     const id = generateSessionId();
-    const timestamp = parseInt(id.split('-')[0], 10);
-    expect(timestamp).toBeGreaterThanOrEqual(before);
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 });
 
@@ -159,11 +157,23 @@ describe('saveSession', () => {
     const session = makeSession();
     await saveSession(storage, session);
 
-    session.messages.push({ role: 'user', content: 'Follow up' });
-    const index = await saveSession(storage, session);
+    const updated = { ...session, messages: [...session.messages, { role: 'user' as const, content: 'Follow up' }] };
+    const index = await saveSession(storage, updated);
 
     expect(index).toHaveLength(1);
     expect(index[0].messageCount).toBe(3);
+  });
+
+  it('does not mutate the input session', async () => {
+    const storage = createMockStorage();
+    const session = makeSession();
+    const originalUpdatedAt = session.updatedAt;
+    const originalMessages = [...session.messages];
+
+    await saveSession(storage, session);
+
+    expect(session.updatedAt).toBe(originalUpdatedAt);
+    expect(session.messages).toEqual(originalMessages);
   });
 
   it('sorts by updatedAt descending', async () => {

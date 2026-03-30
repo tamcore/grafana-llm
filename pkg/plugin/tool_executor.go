@@ -96,7 +96,7 @@ func (te *ToolExecutor) queryPrometheus(ctx context.Context, arguments string, h
 		params.Set("end", resolveTime(args.End, now))
 	}
 
-	apiPath := fmt.Sprintf("/api/datasources/proxy/uid/%s/api/v1/query_range?%s", dsUID, params.Encode())
+	apiPath := fmt.Sprintf("/api/datasources/proxy/uid/%s/api/v1/query_range?%s", url.PathEscape(dsUID), params.Encode())
 	return te.doGrafanaRequest(ctx, http.MethodGet, apiPath, nil, headers)
 }
 
@@ -136,7 +136,7 @@ func (te *ToolExecutor) queryLoki(ctx context.Context, arguments string, headers
 	}
 	params.Set("limit", fmt.Sprintf("%d", limit))
 
-	apiPath := fmt.Sprintf("/api/datasources/proxy/uid/%s/loki/api/v1/query_range?%s", dsUID, params.Encode())
+	apiPath := fmt.Sprintf("/api/datasources/proxy/uid/%s/loki/api/v1/query_range?%s", url.PathEscape(dsUID), params.Encode())
 	return te.doGrafanaRequest(ctx, http.MethodGet, apiPath, nil, headers)
 }
 
@@ -359,7 +359,7 @@ func (te *ToolExecutor) listAlerts(ctx context.Context, arguments string, header
 		params.Set("filter", args.Filter)
 	}
 
-	apiPath := fmt.Sprintf("/api/datasources/proxy/uid/%s/alertmanager/api/v2/alerts", dsUID)
+	apiPath := fmt.Sprintf("/api/datasources/proxy/uid/%s/alertmanager/api/v2/alerts", url.PathEscape(dsUID))
 	if len(params) > 0 {
 		apiPath += "?" + params.Encode()
 	}
@@ -379,8 +379,7 @@ func (te *ToolExecutor) listAlerts(ctx context.Context, arguments string, header
 		for _, alert := range alerts {
 			if state, ok := alert["state"].(string); ok && state == args.State {
 				filtered = append(filtered, alert)
-			}
-			if status, ok := alert["status"].(map[string]interface{}); ok {
+			} else if status, ok := alert["status"].(map[string]interface{}); ok {
 				if state, ok := status["state"].(string); ok && state == args.State {
 					filtered = append(filtered, alert)
 				}
@@ -456,7 +455,9 @@ func (te *ToolExecutor) doGrafanaRequest(ctx context.Context, method, path strin
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBody, err := io.ReadAll(resp.Body)
+	// Limit response body to prevent memory exhaustion (10 MB)
+	const maxResponseBytes = 10 * 1024 * 1024
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 	if err != nil {
 		return "", fmt.Errorf("read response: %w", err)
 	}

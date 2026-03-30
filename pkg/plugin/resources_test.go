@@ -54,6 +54,11 @@ func TestResourceHealth_Success(t *testing.T) {
 	if resp["status"] != "ok" {
 		t.Errorf("status = %q, want %q", resp["status"], "ok")
 	}
+
+	// Verify provider URL is NOT leaked
+	if _, exists := resp["provider"]; exists {
+		t.Error("health response should not include provider URL")
+	}
 }
 
 func TestResourceChat_MissingPrompt(t *testing.T) {

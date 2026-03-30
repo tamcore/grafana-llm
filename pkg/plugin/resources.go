@@ -145,10 +145,9 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, status, map[string]string{
-		"status":   statusStr,
-		"message":  result.Message,
-		"model":    a.settings.Model,
-		"provider": a.settings.EndpointURL,
+		"status":  statusStr,
+		"message": result.Message,
+		"model":   a.settings.Model,
 	})
 }
 

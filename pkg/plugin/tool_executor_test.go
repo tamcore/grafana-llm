@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
@@ -607,6 +608,84 @@ func TestToolExecutor_TokenPath_PicksUpNewToken(t *testing.T) {
 	_, _ = te.Execute(context.Background(), "list_datasources", "{}", nil)
 	if receivedAuth != "Bearer token_v2" {
 		t.Errorf("second request: expected token_v2, got %q", receivedAuth)
+	}
+}
+
+func TestToolExecutor_QueryPrometheus_EscapesDsUID(t *testing.T) {
+	t.Parallel()
+
+	var receivedRawPath string
+	grafanaMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawPath != "" {
+			receivedRawPath = r.URL.RawPath
+		} else {
+			receivedRawPath = r.URL.Path
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/datasources" {
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+				{"name": "Prometheus", "type": "prometheus", "uid": "uid/with/../traversal"},
+			})
+		} else {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"resultType": "matrix", "result": []interface{}{}},
+			})
+		}
+	}))
+	defer grafanaMock.Close()
+
+	te := NewToolExecutor(grafanaMock.URL, log.DefaultLogger)
+	_, err := te.Execute(context.Background(), "query_prometheus", `{"query":"up"}`, nil)
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	// The path-traversal characters should be percent-encoded
+	if strings.Contains(receivedRawPath, "/../") {
+		t.Errorf("dsUID was not path-escaped: %s", receivedRawPath)
+	}
+	if !strings.Contains(receivedRawPath, "%2F") {
+		t.Errorf("expected percent-encoded slashes in path, got: %s", receivedRawPath)
+	}
+}
+
+func TestToolExecutor_ListAlerts_NoDuplicateAppend(t *testing.T) {
+	t.Parallel()
+
+	grafanaMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/datasources" {
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+				{"name": "AM", "type": "alertmanager", "uid": "am-uid"},
+			})
+		} else {
+			// Alert has BOTH top-level state and nested status.state
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+				{
+					"labels": map[string]string{"alertname": "Test"},
+					"state":  "firing",
+					"status": map[string]interface{}{"state": "firing"},
+				},
+			})
+		}
+	}))
+	defer grafanaMock.Close()
+
+	te := NewToolExecutor(grafanaMock.URL, log.DefaultLogger)
+	result, err := te.Execute(context.Background(), "list_alerts", `{"state":"firing"}`, nil)
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	var alerts []map[string]interface{}
+	if err := json.Unmarshal([]byte(result), &alerts); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	// Should appear exactly once, not twice
+	if len(alerts) != 1 {
+		t.Errorf("expected 1 alert (no duplicates), got %d", len(alerts))
 	}
 }
 

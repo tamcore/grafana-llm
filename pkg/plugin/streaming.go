@@ -40,9 +40,7 @@ func (a *App) streamChatCompletion(ctx context.Context, req ChatRequest, sender 
 		Content: req.Prompt,
 	})
 
-	config := openai.DefaultConfig(a.settings.APIKey)
-	config.BaseURL = strings.TrimSuffix(a.settings.EndpointURL, "/")
-	client := openai.NewClientWithConfig(config)
+	client := a.llmClient
 	tools := llmTools()
 
 	for round := 0; round < maxToolRounds; round++ {
@@ -173,7 +171,7 @@ func (a *App) streamFinalResponse(ctx context.Context, client *openai.Client, me
 				ContextTokens: tokens,
 				MaxTokens:     a.settings.MaxContextTokens,
 			})
-			return nil
+			return fmt.Errorf("stream recv: %w", err)
 		}
 
 		if len(response.Choices) > 0 {

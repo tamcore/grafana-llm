@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -33,12 +32,7 @@ func (a *App) chatCompletion(ctx context.Context, req ChatRequest) (string, *Usa
 		Content: req.Prompt,
 	})
 
-	config := openai.DefaultConfig(a.settings.APIKey)
-	config.BaseURL = strings.TrimSuffix(a.settings.EndpointURL, "/")
-
-	client := openai.NewClientWithConfig(config)
-
-	resp, err := client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+	resp, err := a.llmClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:     a.settings.Model,
 		Messages:  messages,
 		MaxTokens: a.settings.MaxTokens,

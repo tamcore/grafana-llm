@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/prometheus/client_golang/prometheus"
+	openai "github.com/sashabaranov/go-openai"
 	"golang.org/x/time/rate"
 )
 
@@ -44,6 +46,7 @@ type App struct {
 	metrics      *metrics
 	toolExecutor *ToolExecutor
 	limiters     sync.Map
+	llmClient    *openai.Client
 }
 
 // getLimiter returns a per-user rate limiter (10 requests per minute).
@@ -122,6 +125,13 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 		logger:       logger,
 		metrics:      newMetrics(prometheus.NewRegistry()),
 		toolExecutor: te,
+	}
+
+	// Create a reusable OpenAI client
+	if settings.EndpointURL != "" && settings.APIKey != "" {
+		config := openai.DefaultConfig(settings.APIKey)
+		config.BaseURL = strings.TrimSuffix(settings.EndpointURL, "/")
+		app.llmClient = openai.NewClientWithConfig(config)
 	}
 
 	app.registerRoutes()

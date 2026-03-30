@@ -102,12 +102,12 @@ export async function loadSession(storage: StorageBackend, id: string): Promise<
 
 /** Save a session and update the index. Trims to MAX_SESSIONS. */
 export async function saveSession(storage: StorageBackend, session: ChatSession): Promise<ChatSessionSummary[]> {
-  session.updatedAt = new Date().toISOString();
-  await storage.setItem(SESSION_KEY_PREFIX + session.id, JSON.stringify(session));
+  const sessionToSave: ChatSession = { ...session, updatedAt: new Date().toISOString() };
+  await storage.setItem(SESSION_KEY_PREFIX + sessionToSave.id, JSON.stringify(sessionToSave));
 
   const index = await loadSessionIndex(storage);
-  const existing = index.findIndex((s) => s.id === session.id);
-  const summary = toSummary(session);
+  const existing = index.findIndex((s) => s.id === sessionToSave.id);
+  const summary = toSummary(sessionToSave);
 
   if (existing >= 0) {
     index[existing] = summary;

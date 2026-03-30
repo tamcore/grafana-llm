@@ -53,6 +53,7 @@ export function ChatPage() {
   const sessionIdRef = useRef(currentSessionId);
   sessionIdRef.current = currentSessionId;
   const abortRef = useRef<AbortController | null>(null);
+  const createdAtRef = useRef(new Date().toISOString());
 
   // Fetch datasources and dashboards on mount
   useEffect(() => {
@@ -153,7 +154,7 @@ export function ChatPage() {
         context: buildSessionContext(),
         contextTokens: tokens ?? contextTokens,
         maxTokens: maxTok ?? maxTokens,
-        createdAt: new Date().toISOString(),
+        createdAt: createdAtRef.current,
         updatedAt: new Date().toISOString(),
       };
 
@@ -166,6 +167,7 @@ export function ChatPage() {
     abortRef.current?.abort();
     setCurrentSessionId(null);
     sessionIdRef.current = null;
+    createdAtRef.current = new Date().toISOString();
     setMessages([]);
     setContextTokens(0);
     setMaxTokens(0);

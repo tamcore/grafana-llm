@@ -100,6 +100,7 @@ export function DashboardChatPage() {
   const sessionIdRef = useRef(currentSessionId);
   sessionIdRef.current = currentSessionId;
   const abortRef = useRef<AbortController | null>(null);
+  const createdAtRef = useRef(new Date().toISOString());
 
   // Fetch dashboard list
   useEffect(() => {
@@ -165,7 +166,7 @@ export function DashboardChatPage() {
         context: ctx,
         contextTokens: tokens ?? contextTokens,
         maxTokens: maxTok ?? maxTokens,
-        createdAt: new Date().toISOString(),
+        createdAt: createdAtRef.current,
         updatedAt: new Date().toISOString(),
       };
 
@@ -178,6 +179,7 @@ export function DashboardChatPage() {
     abortRef.current?.abort();
     setCurrentSessionId(null);
     sessionIdRef.current = null;
+    createdAtRef.current = new Date().toISOString();
     setMessages([]);
     setContextTokens(0);
     setMaxTokens(0);

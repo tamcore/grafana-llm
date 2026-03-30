@@ -79,4 +79,14 @@ export async function* streamChat(
       }
     }
   }
+
+  // Flush remaining buffer after stream ends
+  if (buffer.trim()) {
+    try {
+      const chunk: ChatResponse = JSON.parse(buffer.trim());
+      yield chunk;
+    } catch {
+      // skip non-JSON trailing content
+    }
+  }
 }

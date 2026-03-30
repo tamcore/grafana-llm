@@ -8,6 +8,7 @@ import { streamChat, sendChat, ChatHistory } from '../api';
 import { AnalysisContext } from '../context';
 import { useChatSessions } from '../hooks/useChatSessions';
 import { ChatSession, ChatSessionContext, generateSessionId, generateTitle } from '../utils/chatStorage';
+import { DASHBOARD_FETCH_LIMIT } from '../constants';
 
 interface Datasource {
   name: string;
@@ -64,7 +65,7 @@ export function ChatPage() {
       .catch(() => {});
 
     getBackendSrv()
-      .get('/api/search?type=dash-db&limit=100')
+      .get(`/api/search?type=dash-db&limit=${DASHBOARD_FETCH_LIMIT}`)
       .then((d: DashboardEntry[]) => setDashboards(d))
       .catch(() => {});
 

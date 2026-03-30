@@ -8,6 +8,7 @@ import { streamChat, sendChat, ChatHistory } from '../api';
 import { AnalysisContext, DashboardContext, DashboardPanelSummary } from '../context';
 import { useChatSessions } from '../hooks/useChatSessions';
 import { ChatSession, ChatSessionContext, generateSessionId, generateTitle } from '../utils/chatStorage';
+import { DASHBOARD_FETCH_LIMIT } from '../constants';
 
 interface DashboardSearchResult {
   uid: string;
@@ -106,7 +107,7 @@ export function DashboardChatPage() {
   // Fetch dashboard list
   useEffect(() => {
     getBackendSrv()
-      .get('/api/search?type=dash-db&limit=50')
+      .get(`/api/search?type=dash-db&limit=${DASHBOARD_FETCH_LIMIT}`)
       .then((results: DashboardSearchResult[]) => setDashboards(results))
       .catch(() => setError('Failed to load dashboards'));
 

@@ -18,18 +18,6 @@ spec:
     spec:
       template:
         spec:
-          initContainers:
-            - name: install-llm-plugin
-              image: curlimages/curl:latest
-              command: ["sh", "-c"]
-              args:
-                - |
-                  TAG=$(curl -sI https://github.com/tamcore/grafana-llmanalysis-app/releases/latest | grep -i '^location:' | sed 's|.*/||;s/\r$//')
-                  ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-                  curl -sL "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/${TAG}/tamcore-llmanalysis-app-${TAG}-linux-${ARCH}.tar.gz" | tar xz -C /plugins/
-              volumeMounts:
-                - name: llm-plugin
-                  mountPath: /plugins
           containers:
             - name: grafana
               env:
@@ -40,9 +28,9 @@ spec:
                       key: password
                 - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
                   value: tamcore-llmanalysis-app
+                - name: GF_INSTALL_PLUGINS
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
               volumeMounts:
-                - name: llm-plugin
-                  mountPath: /var/lib/grafana/plugins/tamcore-llmanalysis-app
                 - name: llm-plugin-config
                   mountPath: /etc/grafana/provisioning/plugins
                   readOnly: true
@@ -57,8 +45,6 @@ spec:
                   cpu: 500m
                   memory: 512Mi
           volumes:
-            - name: llm-plugin
-              emptyDir: {}
             - name: llm-plugin-config
               secret:
                 secretName: llm-plugin-config

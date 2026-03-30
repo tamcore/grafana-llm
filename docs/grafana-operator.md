@@ -42,6 +42,14 @@ The `Grafana` CR manages the Grafana deployment. Key points:
 - `spec.config.plugins.allow_loading_unsigned_plugins` mirrors this in the INI config
 - The plugin binary must be available in the container's plugin directory
 
+### Loading the Plugin
+
+**Option A — `GF_INSTALL_PLUGINS` (recommended)**
+
+Grafana natively supports installing plugins from a URL via the
+`GF_INSTALL_PLUGINS` environment variable. The plugin is downloaded and
+extracted on every container start — no init containers or volumes needed.
+
 ```yaml
 apiVersion: grafana.integreatly.org/v1beta1
 kind: Grafana
@@ -56,7 +64,6 @@ spec:
   config:
     security:
       admin_user: admin
-      admin_password: ${GF_SECURITY_ADMIN_PASSWORD}
     plugins:
       allow_loading_unsigned_plugins: tamcore-llmanalysis-app
 
@@ -74,29 +81,24 @@ spec:
                       key: password
                 - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
                   value: tamcore-llmanalysis-app
-              resources:
-                requests:
-                  cpu: 100m
-                  memory: 128Mi
-                limits:
-                  cpu: 500m
-                  memory: 512Mi
-              volumeMounts:
-                - name: llm-plugin
-                  mountPath: /var/lib/grafana/plugins/tamcore-llmanalysis-app
-          volumes:
-            - name: llm-plugin
-              emptyDir: {}
+                - name: GF_INSTALL_PLUGINS
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
 ```
 
-### Loading the Plugin
+The `GF_INSTALL_PLUGINS` format is `<url>;<plugin-id>`. The `/releases/latest/download/`
+URL always points to the newest release.
 
-The operator does not have a native way to install arbitrary app plugins from
-a URL. You have several options:
+To pin a specific version:
 
-**Option A — Init container (recommended)**
+```yaml
+                - name: GF_INSTALL_PLUGINS
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/v0.1.0/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
+```
 
-Add an init container that downloads or copies the plugin into the shared volume:
+**Option B — Init container**
+
+If you prefer not to download on every restart, use an init container with the
+tar.gz archive:
 
 ```yaml
 deployment:
@@ -111,7 +113,7 @@ deployment:
               - |
                 TAG=$(curl -sI https://github.com/tamcore/grafana-llmanalysis-app/releases/latest | grep -i '^location:' | sed 's|.*/||;s/\r$//')
                 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-                curl -sL "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/${TAG}/tamcore-llmanalysis-app-${TAG}-linux-${ARCH}.tar.gz" \
+                curl -sL "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/${TAG}/tamcore-llmanalysis-app-linux-${ARCH}.tar.gz" \
                   | tar xz -C /plugins/
             volumeMounts:
               - name: llm-plugin
@@ -124,32 +126,6 @@ deployment:
         volumes:
           - name: llm-plugin
             emptyDir: {}
-```
-
-To pin a specific version instead of using the latest release:
-
-```yaml
-            args:
-              - |
-                ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-                curl -sL "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/v0.1.0/tamcore-llmanalysis-app-v0.1.0-linux-${ARCH}.tar.gz" \
-                  | tar xz -C /plugins/
-```
-
-**Option B — PVC with manual upload**
-
-Use a `PersistentVolumeClaim` and copy the plugin once:
-
-```yaml
-volumes:
-  - name: llm-plugin
-    persistentVolumeClaim:
-      claimName: grafana-plugins
-```
-
-```bash
-# Copy plugin to the PVC (via a running pod)
-kubectl cp dist/ grafana/<pod-name>:/var/lib/grafana/plugins/tamcore-llmanalysis-app/
 ```
 
 **Option C — Custom Grafana image**
@@ -537,26 +513,12 @@ spec:
   config:
     security:
       admin_user: admin
-      admin_password: ${GF_SECURITY_ADMIN_PASSWORD}
     plugins:
       allow_loading_unsigned_plugins: tamcore-llmanalysis-app
   deployment:
     spec:
       template:
         spec:
-          initContainers:
-            - name: install-llm-plugin
-              image: curlimages/curl:latest
-              command: ["sh", "-c"]
-              args:
-                - |
-                  TAG=$(curl -sI https://github.com/tamcore/grafana-llmanalysis-app/releases/latest | grep -i '^location:' | sed 's|.*/||;s/\r$//')
-                  ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-                  curl -sL "https://github.com/tamcore/grafana-llmanalysis-app/releases/download/${TAG}/tamcore-llmanalysis-app-${TAG}-linux-${ARCH}.tar.gz" \
-                    | tar xz -C /plugins/
-              volumeMounts:
-                - name: llm-plugin
-                  mountPath: /plugins
           containers:
             - name: grafana
               env:
@@ -567,9 +529,9 @@ spec:
                       key: password
                 - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
                   value: tamcore-llmanalysis-app
+                - name: GF_INSTALL_PLUGINS
+                  value: "https://github.com/tamcore/grafana-llmanalysis-app/releases/latest/download/tamcore-llmanalysis-app-linux-amd64.zip;tamcore-llmanalysis-app"
               volumeMounts:
-                - name: llm-plugin
-                  mountPath: /var/lib/grafana/plugins/tamcore-llmanalysis-app
                 - name: llm-plugin-provisioning
                   mountPath: /etc/grafana/provisioning/plugins
                   readOnly: true
@@ -577,8 +539,6 @@ spec:
                   mountPath: /var/run/secrets/grafana-sa
                   readOnly: true
           volumes:
-            - name: llm-plugin
-              emptyDir: {}
             - name: llm-plugin-provisioning
               secret:
                 secretName: llm-plugin-config

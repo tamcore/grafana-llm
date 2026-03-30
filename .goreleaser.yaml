@@ -21,8 +21,10 @@ builds:
         goarch: arm64
 
 archives:
-  - id: plugin
-    name_template: "{{ .ProjectName }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}"
+  - name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+    formats:
+      - zip
+      - tar.gz
     files:
       - src: "plugin-dist/*.*"
         dst: "."

@@ -5,7 +5,7 @@ import { PLUGIN_ID } from '../constants';
 const RESOURCE_BASE = `/api/plugins/${PLUGIN_ID}/resources`;
 
 export interface ChatHistory {
-  role: string;
+  role: 'user' | 'assistant' | 'tool' | 'system';
   content: string;
 }
 

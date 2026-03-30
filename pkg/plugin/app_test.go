@@ -141,6 +141,25 @@ func TestNewApp_GrafanaTokenPath(t *testing.T) {
 	}
 }
 
+func TestNewApp_PlaintextTokenIgnored(t *testing.T) {
+	t.Parallel()
+
+	settings := backend.AppInstanceSettings{
+		JSONData: []byte(`{"endpointURL":"https://example.com/v1","model":"test","grafanaServiceAccountToken":"plaintext-token"}`),
+	}
+
+	inst, err := NewApp(context.Background(), settings)
+	if err != nil {
+		t.Fatalf("NewApp() returned error: %v", err)
+	}
+
+	app := inst.(*App)
+	// Plaintext token in jsonData must NOT be promoted to GrafanaToken
+	if app.settings.GrafanaToken != "" {
+		t.Errorf("GrafanaToken = %q, want empty (plaintext token should be ignored)", app.settings.GrafanaToken)
+	}
+}
+
 func TestNewApp_GrafanaTokenPathTakesPrecedence(t *testing.T) {
 	t.Parallel()
 

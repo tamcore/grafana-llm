@@ -29,9 +29,7 @@ type Settings struct {
 	// GrafanaTokenPath is a file path to read the Grafana service account token from.
 	// When set, the token is re-read on each request, enabling rotation without restarts.
 	GrafanaTokenPath string `json:"grafanaTokenPath,omitempty"`
-	// GrafanaServiceAcctToken is read from jsonData for convenience.
-	GrafanaServiceAcctToken string `json:"grafanaServiceAccountToken,omitempty"`
-	APIKey                  string `json:"-"`
+	APIKey string `json:"-"`
 	// GrafanaToken is read from secureJsonData.
 	GrafanaToken string `json:"-"`
 }
@@ -73,10 +71,6 @@ func NewApp(_ context.Context, appSettings backend.AppInstanceSettings) (instanc
 
 	if grafanaToken, ok := appSettings.DecryptedSecureJSONData["grafanaToken"]; ok {
 		settings.GrafanaToken = grafanaToken
-	}
-	// Also support token from jsonData for convenience
-	if settings.GrafanaToken == "" && settings.GrafanaServiceAcctToken != "" {
-		settings.GrafanaToken = settings.GrafanaServiceAcctToken
 	}
 
 	grafanaURL := settings.GrafanaURL

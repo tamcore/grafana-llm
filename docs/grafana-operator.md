@@ -326,6 +326,7 @@ stringData:
           maxContextTokens: 120000
         secureJsonData:
           apiKey: "sk-..."
+          grafanaToken: "glsa_..."
 ```
 
 Then add a volume mount to the `Grafana` CR:
@@ -368,7 +369,8 @@ curl -u admin:change-me -X POST \
       "maxContextTokens": 120000
     },
     "secureJsonData": {
-      "apiKey": "sk-..."
+      "apiKey": "sk-...",
+      "grafanaToken": "glsa_..."
     }
   }'
 ```
@@ -380,15 +382,41 @@ curl -u admin:change-me -X POST \
 | `endpointURL` | jsonData | Base URL of your OpenAI-compatible API |
 | `model` | jsonData | Model name (e.g., `gpt-4o`) |
 | `apiKey` | **secureJsonData** | API key (stored encrypted in Grafana DB) |
+| `grafanaToken` | **secureJsonData** | Grafana service account token for tool calling |
 | `timeoutSeconds` | jsonData | Request timeout (default: 60) |
 | `maxTokens` | jsonData | Max response tokens (default: 4096) |
 | `maxContextTokens` | jsonData | Context window limit for token tracking |
 
+> **Note:** `grafanaToken` is required for LLM tool calling (querying datasources,
+> listing dashboards, etc.). Without it, the plugin cannot access Grafana's API
+> and tool calls will fail with 401. Create a Grafana service account with
+> **Viewer** role and generate a token for it.
+
 ## 7. Service Accounts
 
-Use the `GrafanaServiceAccount` CRD to create a service account with an API
-token. This is useful for CI/CD pipelines that need to configure the plugin or
-for external services that call the Grafana API.
+The plugin **requires** a Grafana service account token for tool calling. Without
+it, the LLM cannot query datasources, list dashboards, or access any Grafana API.
+
+Create a service account after Grafana is running:
+
+```bash
+# Create a Viewer service account
+SA_ID=$(curl -s -u admin:change-me \
+  http://grafana.example.com/api/serviceaccounts \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"llm-plugin","role":"Viewer"}' | jq .id)
+
+# Generate a token
+curl -s -u admin:change-me \
+  "http://grafana.example.com/api/serviceaccounts/$SA_ID/tokens" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"llm-tool-calling"}'
+```
+
+Then add the `grafanaToken` to the plugin configuration (Option A or B above).
+
+Alternatively, use the `GrafanaServiceAccount` CRD to create a service account
+declaratively:
 
 ```yaml
 apiVersion: grafana.integreatly.org/v1beta1
@@ -470,6 +498,7 @@ stringData:
           maxContextTokens: 120000
         secureJsonData:
           apiKey: "sk-..."
+          grafanaToken: "glsa_..."
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: Grafana

@@ -332,6 +332,7 @@ func TestStreamingChat_ToolCalling(t *testing.T) {
 	t.Parallel()
 
 	callCount := 0
+	var toolResultContent string
 	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bodyBytes, _ := io.ReadAll(r.Body)
 		var reqBody map[string]interface{}
@@ -358,6 +359,7 @@ func TestStreamingChat_ToolCalling(t *testing.T) {
 			msg, _ := m.(map[string]interface{})
 			if msg["role"] == "tool" {
 				hasToolResult = true
+				toolResultContent, _ = msg["content"].(string)
 			}
 		}
 
@@ -480,5 +482,10 @@ func TestStreamingChat_ToolCalling(t *testing.T) {
 
 	if got := fullContent.String(); got != "CPU is at 45%" {
 		t.Errorf("content = %q, want %q", got, "CPU is at 45%")
+	}
+
+	// Verify tool results include data-framing prefix to prevent prompt injection
+	if !strings.HasPrefix(toolResultContent, "[TOOL RESULT") {
+		t.Errorf("tool result should have framing prefix, got: %q", toolResultContent[:min(80, len(toolResultContent))])
 	}
 }
